@@ -108,7 +108,6 @@
   <ItemGroup>
     <ClCompile Include="common\geomx.cpp" />
     <ClCompile Include="common\gl_helper.cpp" />
-    <ClCompile Include="common\image.cpp" />
     <ClCompile Include="common\matrix.cpp" />
     <ClCompile Include="common\mdebug.cpp" />
     <ClCompile Include="common\mtime.cpp" />
@@ -122,13 +121,11 @@
     <ClInclude Include="common\common_defs.h" />
     <ClInclude Include="common\geomx.h" />
     <ClInclude Include="common\gl_helper.h" />
-    <ClInclude Include="common\image.h" />
     <ClInclude Include="common\matrix-inline.h" />
     <ClInclude Include="common\matrix.h" />
     <ClInclude Include="common\mdebug.h" />
     <ClInclude Include="common\mtime.h" />
     <ClInclude Include="common\point_set.h" />
-    <ClInclude Include="common\vector-inline.h" />
     <ClInclude Include="common\vector.h" />
     <ClInclude Include="fluids\fluid.h" />
     <ClInclude Include="fluids\fluid_system.h" />

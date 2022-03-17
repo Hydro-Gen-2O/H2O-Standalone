@@ -20,7 +20,6 @@
   3. This notice may not be removed or altered from any source distribution.
 */
 
-
 #ifndef DEF_FLUID_SYS
 	#define DEF_FLUID_SYS
 
@@ -65,7 +64,6 @@
 	#define WALL_BARRIER		3
 	#define LEVY_BARRIER		4
 	#define DRAIN_BARRIER		5
-	#define USE_CUDA			6
 	
 	#define MAX_PARAM			21
 	#define BFLUID				2
@@ -98,9 +96,8 @@
 		void SPH_ComputeForceGridNC ();				// O(cn) - neighbor table		
 		
 	private:
-
 		// Smoothed Particle Hydrodynamics
-		double						m_R2, m_Poly6Kern, m_LapKern, m_SpikyKern;		// Kernel functions
+		double m_R2, m_Poly6Kern, m_LapKern, m_SpikyKern; // Kernel functions
 	};
 
 #endif

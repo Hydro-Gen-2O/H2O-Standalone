@@ -178,11 +178,6 @@ void PointSet::Reset ()
 	
 	m_Vec[ POINT_GRAV_POS].Set(0,0,50.0);
 	m_Vec[ PLANE_GRAV_DIR].Set(0,0,-9.8);
-	m_Vec[ EMIT_RATE ].Set ( 1, 10, 0 );
-	m_Vec[ EMIT_POS ].Set ( 50, 0, 35 );	
-	m_Vec[ EMIT_ANG ].Set ( 90, 45, 50.0 );	
-	m_Vec[ EMIT_DANG ].Set ( 0, 0, 0 );	
-	m_Vec[ EMIT_SPREAD ].Set ( 4, 4, 1 );	
 }
 
 void PointSet::Initialize ( int mode, int total )
@@ -284,41 +279,8 @@ void PointSet::Draw ( float* view_mat, float rad )
 	}
 }
 
-void PointSet::Emit ( float spacing )
-{
-	Particle* p;
-	Vector3DF dir;
-	Vector3DF pos;
-	float ang_rand, tilt_rand;
-	float rnd = m_Vec[EMIT_RATE].y * 0.15;	
-	int x = (int) sqrt(m_Vec[EMIT_RATE].y);
-
-	for ( int n = 0; n < m_Vec[EMIT_RATE].y; n++ ) {
-		ang_rand = (float(rand()*2.0/RAND_MAX) - 1.0) * m_Vec[EMIT_SPREAD].x;
-		tilt_rand = (float(rand()*2.0/RAND_MAX) - 1.0) * m_Vec[EMIT_SPREAD].y;
-		dir.x = cos ( ( m_Vec[EMIT_ANG].x + ang_rand) * DEGtoRAD ) * sin( ( m_Vec[EMIT_ANG].y + tilt_rand) * DEGtoRAD ) * m_Vec[EMIT_ANG].z;
-		dir.y = sin ( ( m_Vec[EMIT_ANG].x + ang_rand) * DEGtoRAD ) * sin( ( m_Vec[EMIT_ANG].y + tilt_rand) * DEGtoRAD ) * m_Vec[EMIT_ANG].z;
-		dir.z = cos ( ( m_Vec[EMIT_ANG].y + tilt_rand) * DEGtoRAD ) * m_Vec[EMIT_ANG].z;
-		pos = m_Vec[EMIT_POS];
-		pos.x += spacing * (n/x);
-		pos.y += spacing * (n%x);
-		
-		p = (Particle*) GetElem( 0, AddPointReuse () );
-		p->pos = pos;
-		p->vel = dir;
-		p->vel_eval = dir;
-		p->age = 0;	
-		p->clr = COLORA ( m_Time/10.0, m_Time/5.0, m_Time /4.0, 1 );
-	}
-}
-
-
 void PointSet::Run ()
 {
-	if ( m_Vec[EMIT_RATE].x > 0 && ++m_Frame >= (int) m_Vec[EMIT_RATE].x ) {
-		m_Frame = 0;
-		Emit ( 1.0 ); 
-	}
 	Advance();
 }
 
@@ -327,10 +289,6 @@ void PointSet::Advance ()
 	char* dat;
 	Particle* p;
 	Vector3DF vnext, accel, norm;
-
-	vnext = m_Vec[EMIT_DANG];
-	vnext *= m_DT;
-	m_Vec[EMIT_ANG] += vnext;
 		
 	dat = mBuf[0].data;		
 	for ( int c = 0; c < NumPoints(); c++ ) {		

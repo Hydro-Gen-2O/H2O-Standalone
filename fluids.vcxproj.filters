@@ -21,9 +21,6 @@
     <ClCompile Include="common\gl_helper.cpp">
       <Filter>common</Filter>
     </ClCompile>
-    <ClCompile Include="common\image.cpp">
-      <Filter>common</Filter>
-    </ClCompile>
     <ClCompile Include="common\matrix.cpp">
       <Filter>common</Filter>
     </ClCompile>
@@ -57,9 +54,6 @@
     <ClInclude Include="common\gl_helper.h">
       <Filter>common</Filter>
     </ClInclude>
-    <ClInclude Include="common\image.h">
-      <Filter>common</Filter>
-    </ClInclude>
     <ClInclude Include="common\matrix-inline.h">
       <Filter>common</Filter>
     </ClInclude>
@@ -73,9 +67,6 @@
       <Filter>common</Filter>
     </ClInclude>
     <ClInclude Include="common\point_set.h">
-      <Filter>common</Filter>
-    </ClInclude>
-    <ClInclude Include="common\vector-inline.h">
       <Filter>common</Filter>
     </ClInclude>
     <ClInclude Include="common\vector.h">

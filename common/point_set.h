@@ -48,11 +48,6 @@
 	#define PLANE_GRAV			3
 
 	// Vector params
-	#define EMIT_POS			0
-	#define EMIT_ANG			1
-	#define EMIT_DANG			2
-	#define EMIT_SPREAD			3
-	#define EMIT_RATE			4
 	#define POINT_GRAV_POS		5	
 	#define PLANE_GRAV_DIR		6	
 
@@ -97,8 +92,7 @@
 		
 		// Particle system		
 		virtual void Run ();
-		virtual void Advance ();		
-		virtual void Emit ( float spacing );			
+		virtual void Advance ();	
 
 		// Misc
 		virtual void AddVolume ( Vector3DF min, Vector3DF max, float spacing );

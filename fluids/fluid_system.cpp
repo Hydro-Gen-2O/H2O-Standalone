@@ -19,24 +19,13 @@
      misrepresented as being the original software.
   3. This notice may not be removed or altered from any source distribution.
 */
-
-
-
 #include <conio.h>
 
-#ifdef _MSC_VER
-	#include <gl/glut.h>
-#else
-	#include <GL/glut.h>
-#endif
+#include <gl/glut.h>
 
 #include "common_defs.h"
 #include "mtime.h"
 #include "fluid_system.h"
-
-#ifdef BUILD_CUDA
-	#include "fluid_system_host.cuh"
-#endif
 
 #define EPSILON			0.00001f			//for collision detection
 
@@ -95,10 +84,6 @@ void FluidSystem::Reset ( int nmax )
 	
 	m_Vec [ POINT_GRAV_POS ].Set ( 0, 0, 50 );
 	m_Vec [ PLANE_GRAV_DIR ].Set ( 0, 0, -9.8 );
-	m_Vec [ EMIT_POS ].Set ( 0, 0, 0 );
-	m_Vec [ EMIT_RATE ].Set ( 0, 0, 0 );
-	m_Vec [ EMIT_ANG ].Set ( 0, 90, 1.0 );
-	m_Vec [ EMIT_DANG ].Set ( 0, 0, 0 );
 }
 
 int FluidSystem::AddPoint ()
@@ -134,61 +119,17 @@ int FluidSystem::AddPointReuse ()
 
 void FluidSystem::Run ()
 {
-	bool bTiming = true;
+	bool bTiming = false; // SET TRUE TO VIEW TIMES
 
 	mint::Time start, stop;
 	
 	float ss = m_Param [ SPH_PDIST ] / m_Param[ SPH_SIMSCALE ];		// simulation scale (not Schutzstaffel)
-
-	if ( m_Vec[EMIT_RATE].x > 0 && (++m_Frame) % (int) m_Vec[EMIT_RATE].x == 0 ) {
-		//m_Frame = 0;
-		Emit ( ss ); 
-	}
 	
 	#ifdef NOGRID
 		// Slow method - O(n^2)
 		SPH_ComputePressureSlow ();
 		SPH_ComputeForceSlow ();
 	#else
-
-		if ( m_Toggle[USE_CUDA] ) {
-			
-			#ifdef BUILD_CUDA
-				// -- GPU --
-				start.SetSystemTime ( ACC_NSEC );		
-				TransferToCUDA ( mBuf[0].data, (int*) &m_Grid[0], NumPoints() );
-				if ( bTiming) { stop.SetSystemTime ( ACC_NSEC ); stop = stop - start; printf ( "TO: %s\n", stop.GetReadableTime().c_str() ); }
-			
-				start.SetSystemTime ( ACC_NSEC );		
-				Grid_InsertParticlesCUDA ();
-				if ( bTiming) { stop.SetSystemTime ( ACC_NSEC ); stop = stop - start; printf ( "INSERT (CUDA): %s\n", stop.GetReadableTime().c_str() ); }
-
-				start.SetSystemTime ( ACC_NSEC );
-				SPH_ComputePressureCUDA ();
-				if ( bTiming) { stop.SetSystemTime ( ACC_NSEC ); stop = stop - start; printf ( "PRESS (CUDA): %s\n", stop.GetReadableTime().c_str() ); }
-
-				start.SetSystemTime ( ACC_NSEC );
-				SPH_ComputeForceCUDA (); 
-				if ( bTiming) { stop.SetSystemTime ( ACC_NSEC ); stop = stop - start; printf ( "FORCE (CUDA): %s\n", stop.GetReadableTime().c_str() ); }
-
-				//** CUDA integrator is incomplete..
-				// Once integrator is done, we can remove TransferTo/From steps
-				/*start.SetSystemTime ( ACC_NSEC );
-				SPH_AdvanceCUDA( m_DT, m_DT/m_Param[SPH_SIMSCALE] );
-				if ( bTiming) { stop.SetSystemTime ( ACC_NSEC ); stop = stop - start; printf ( "ADV (CUDA): %s\n", stop.GetReadableTime().c_str() ); }*/
-
-				start.SetSystemTime ( ACC_NSEC );		
-				TransferFromCUDA ( mBuf[0].data, (int*) &m_Grid[0], NumPoints() );
-				if ( bTiming) { stop.SetSystemTime ( ACC_NSEC ); stop = stop - start; printf ( "FROM: %s\n", stop.GetReadableTime().c_str() ); }
-
-				// .. Do advance on CPU 
-				Advance();
-
-			#endif
-			
-		} else {
-			// -- CPU only --
-
 			start.SetSystemTime ( ACC_NSEC );
 			Grid_InsertParticles ();
 			if ( bTiming) { stop.SetSystemTime ( ACC_NSEC ); stop = stop - start; printf ( "INSERT: %s\n", stop.GetReadableTime().c_str() ); }
@@ -204,8 +145,6 @@ void FluidSystem::Run ()
 			start.SetSystemTime ( ACC_NSEC );
 			Advance();
 			if ( bTiming) { stop.SetSystemTime ( ACC_NSEC ); stop = stop - start; printf ( "ADV: %s\n", stop.GetReadableTime().c_str() ); }
-		}		
-		
 	#endif
 }
 
@@ -508,10 +447,6 @@ void FluidSystem::SPH_CreateExample ( int n, int nmax )
 		m_Vec [ SPH_VOLMAX ].Set ( 30, 30, 50 );
 		m_Vec [ SPH_INITMIN ].Set ( -30, -30, 0 );
 		m_Vec [ SPH_INITMAX ].Set ( 30, 30, 40 );
-		m_Vec [ EMIT_POS ].Set ( -20, -20, 22 );
-		m_Vec [ EMIT_RATE ].Set ( 1, 4, 0 );
-		m_Vec [ EMIT_ANG ].Set ( 0, 120, 1.5 );
-		m_Vec [ EMIT_DANG ].Set ( 0, 0, 0 );
 		m_Vec [ PLANE_GRAV_DIR ].Set ( 0.0, 0, -9.8 );
 		break;
 	case 4:		// Shockwave
@@ -528,9 +463,6 @@ void FluidSystem::SPH_CreateExample ( int n, int nmax )
 		m_Vec [ SPH_VOLMAX ].Set ( 40, 40, 50 );
 		m_Vec [ SPH_INITMIN ].Set ( -20, -20, 20 );
 		m_Vec [ SPH_INITMAX ].Set ( 20, 20, 40 );
-		m_Vec [ EMIT_POS ].Set ( -20, 0, 40 );
-		m_Vec [ EMIT_RATE ].Set ( 2, 1, 0 );		
-		m_Vec [ EMIT_ANG ].Set ( 0, 120, 0.25 );
 		m_Vec [ PLANE_GRAV_DIR ].Set ( 0, 0, 0 );
 		m_Param [ SPH_INTSTIFF ] = 0.20;		
 		break;
@@ -539,10 +471,7 @@ void FluidSystem::SPH_CreateExample ( int n, int nmax )
 		m_Vec [ SPH_VOLMAX ].Set ( 40, 40, 50 );
 		m_Vec [ SPH_INITMIN ].Set ( -20, -20, 20 );
 		m_Vec [ SPH_INITMAX ].Set ( 20, 20, 40 );
-		m_Param [ SPH_INTSTIFF ] = 0.50;		
-		m_Vec [ EMIT_POS ].Set ( -20, 20, 25 );
-		m_Vec [ EMIT_RATE ].Set ( 1, 4, 0 );		
-		m_Vec [ EMIT_ANG ].Set ( -20, 100, 2.0 );
+		m_Param [ SPH_INTSTIFF ] = 0.50;
 		m_Vec [ POINT_GRAV_POS ].Set ( 0, 0, 25 );
 		m_Vec [ PLANE_GRAV_DIR ].Set ( 0, 0, 0 );
 		m_Param [ POINT_GRAV ] = 3.5;
@@ -552,9 +481,6 @@ void FluidSystem::SPH_CreateExample ( int n, int nmax )
 		m_Vec [ SPH_VOLMAX ].Set ( 40, 40, 50 );
 		m_Vec [ SPH_INITMIN ].Set ( 10, -40, 0 );
 		m_Vec [ SPH_INITMAX ].Set ( 40, 40, 50 );
-		m_Vec [ EMIT_POS ].Set ( 34, 27, 16.6 );
-		m_Vec [ EMIT_RATE ].Set ( 2, 9, 0 );		
-		m_Vec [ EMIT_ANG ].Set ( 118, 200, 1.0 );
 		m_Toggle [ LEVY_BARRIER ] = true;
 		m_Param [ BOUND_ZMIN_SLOPE ] = 0.1;
 		m_Vec [ PLANE_GRAV_DIR ].Set ( 0.0, 0, -9.8 );
@@ -564,9 +490,6 @@ void FluidSystem::SPH_CreateExample ( int n, int nmax )
 		m_Vec [ SPH_VOLMAX ].Set ( 20, 20, 50 );
 		m_Vec [ SPH_INITMIN ].Set ( -15, -20, 20 );
 		m_Vec [ SPH_INITMAX ].Set ( 20, 20, 50 );
-		m_Vec [ EMIT_POS ].Set ( -16, -16, 30 );
-		m_Vec [ EMIT_RATE ].Set ( 1, 4, 0 );		
-		m_Vec [ EMIT_ANG ].Set ( -20, 140, 1.8 );
 		m_Toggle [ DRAIN_BARRIER ] = true;
 		m_Vec [ PLANE_GRAV_DIR ].Set ( 0.0, 0, -9.8 );
 		break;
@@ -610,18 +533,6 @@ void FluidSystem::SPH_CreateExample ( int n, int nmax )
 	vmin -= Vector3DF(2,2,2);
 	vmax =  m_Vec[SPH_VOLMAX];
 	vmax += Vector3DF(2,2,-2);
-
-	#ifdef BUILD_CUDA
-		FluidClearCUDA ();
-		Sleep ( 500 );
-
-		FluidSetupCUDA ( NumPoints(), sizeof(Fluid), *(float3*)& m_GridMin, *(float3*)& m_GridMax, *(float3*)& m_GridRes, *(float3*)& m_GridSize, (int) m_Vec[EMIT_RATE].x );
-
-		Sleep ( 500 );
-
-		FluidParamCUDA ( m_Param[SPH_SIMSCALE], m_Param[SPH_SMOOTHRADIUS], m_Param[SPH_PMASS], m_Param[SPH_RESTDENSITY], m_Param[SPH_INTSTIFF], m_Param[SPH_VISC] );
-	#endif
-
 }
 
 // Compute Pressures - Very slow yet simple. O(n^2)
@@ -866,4 +777,3 @@ void FluidSystem::SPH_ComputeForceGridNC ()
 		p->sph_force = force;
 	}
 }
-

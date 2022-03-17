@@ -30,17 +30,10 @@ extern "C" { FILE __iob_func[3] = { *stdin,*stdout,*stderr }; }
 
 #include "common_defs.h"
 
-#ifdef BUILD_CUDA
-	#include "fluid_system_host.cuh"	
-#endif
 #include "fluid_system.h"
 #include "gl_helper.h"
 
-#ifdef _MSC_VER						// Windows
-	#include <gl/glut.h>
-#else								// Linux
-	#include <GL/glut.h>	
-#endif
+#include <gl/glut.h>
 
 bool bTiming = false;
 bool bRec = false;
@@ -53,7 +46,6 @@ float window_width  = 1024;
 float window_height = 768;
 
 Vector3DF	cam_from, cam_angs, cam_to;			// Camera stuff
-Vector3DF	obj_from, obj_angs, obj_dang;
 Vector3DF	light[2], light_to[2];				// Light stuff
 float		light_fov, cam_fov;	
 
@@ -73,12 +65,14 @@ float view_matrix[16];					// View matrix (V)
 float model_matrix[16];					// Model matrix (M)
 float proj_matrix[16];					// Projective matrix
 
+
+// Different things we can move around
+
 // Mouse control
 #define DRAG_OFF		0				// mouse states
 #define DRAG_LEFT		1
 #define DRAG_RIGHT		2
 int		last_x = -1, last_y = -1;		// mouse vars
-int		mode = 0;
 int		dragging = 0;
 int		psel;
 
@@ -86,15 +80,6 @@ GLuint	screen_id;
 GLuint	depth_id;
 
 
-// Different things we can move around
-#define MODE_CAM		0
-#define MODE_CAM_TO		1
-#define MODE_OBJ		2
-#define MODE_OBJPOS		3
-#define MODE_OBJGRP		4
-#define MODE_LIGHTPOS	5
-
-#define MODE_DOF		6
 
 GLuint screenBufferObject;
 GLuint depthBufferObject;
@@ -145,10 +130,6 @@ void draw2D ()
 {
 	
 	mint::Time start, stop;
-
-	#ifdef USE_SHADOWS
-		disableShadows ();
-	#endif
 	glDisable ( GL_LIGHTING );  
 	glDisable ( GL_DEPTH_TEST );
 
@@ -169,24 +150,12 @@ void draw2D ()
 	strcpy ( disp, "Press H for help." );		drawText ( 10, 20, disp );  
 
 	if ( bHelp ) {	
-
-		if ( psys.GetToggle ( USE_CUDA ) ) {
-			sprintf ( disp,	"Kernel:  USING CUDA (GPU)" );				drawText ( 20, 40,  disp );	
-		} else {
-			sprintf ( disp,	"Kernel:  USING CPU" );				drawText ( 20, 40,  disp );
-		}		
+		sprintf ( disp,	"Kernel:  USING CPU" );				drawText ( 20, 40,  disp );
 
 		sprintf ( disp,	"KEYBOARD" );						drawText ( 20, 60,  disp );
 		sprintf ( disp,	"[ ]    Next/Prev Demo" );			drawText ( 20, 70,  disp );
-		sprintf ( disp,	"N M    Adjust Max Particles" );	drawText ( 20, 80,  disp );
 		sprintf ( disp,	"space  Pause" );					drawText ( 20, 90,  disp );
 		sprintf ( disp,	"S      Shading mode" );			drawText ( 20, 100,  disp );	
-		sprintf ( disp,	"G      Toggle CUDA vs CPU" );		drawText ( 20, 110,  disp );	
-		sprintf ( disp,	"< >    Change emitter rate" );		drawText ( 20, 120,  disp );	
-		sprintf ( disp,	"C      Move camera /w mouse" );	drawText ( 20, 130,  disp );	
-		sprintf ( disp,	"I      Move emitter /w mouse" );	drawText ( 20, 140,  disp );	
-		sprintf ( disp,	"O      Change emitter angle" );	drawText ( 20, 150,  disp );	
-		sprintf ( disp,	"L      Move light /w mouse" );				drawText ( 20, 160,  disp );			
 		sprintf ( disp,	"X      Draw velocity/pressure/color" );	drawText ( 20, 170,  disp );
 
 		Vector3DF vol = psys.GetVec(SPH_VOLMAX);
@@ -238,49 +207,31 @@ void computeView ()
 	glPopMatrix ();
 }	
 
-int frame;
-
 void display () 
 {
-	mint::Time start, stop;	
-
-//	iso = sin(frame*0.01f );
+	mint::Time start, stop;
 	
 	// Do simulation!
 	if ( !bPause ) psys.Run ();
 
-	frame++;
 	measureFPS ();
 
 	glEnable ( GL_DEPTH_TEST );
 
 	// Render depth map shadows
 	start.SetSystemTime ( ACC_NSEC );
-	disableShadows ();
-	#ifdef USE_SHADOWS
-		if ( iShade==1 ) {
-			renderDepthMap_FrameBuffer ( 0, window_width, window_height );
-		} else {
-			renderDepthMap_Clear ( window_width, window_height );		
-		}
-	#endif	
 
 	// Clear frame buffer
 	if ( iShade<=1 ) 	glClearColor( 0.29, 0.29, 0.29, 1.0 );
 	else				glClearColor ( 0, 0, 0, 0 );
-	glClear ( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
+	glClear (GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glDisable ( GL_CULL_FACE );
 	glShadeModel ( GL_SMOOTH );
 
 	// Compute camera view
 	computeFromPositions ();
 	computeProjection ();
-	computeView ();		
-
-	// Draw Shadows (if on)
-	#ifdef USE_SHADOWS	
-		if ( iShade==1 )	renderShadows ( view_matrix );			
-	#endif
+	computeView ();
 
 	// Draw 3D	
 	start.SetSystemTime ( ACC_NSEC );
@@ -299,22 +250,14 @@ void display ()
 
 void reshape ( int width, int height ) 
 {
-  // set window height and width
   window_width  = (float) width;
   window_height = (float) height;
   glViewport( 0, 0, width, height );  
 }
 
-void UpdateEmit ()
-{	
-	obj_from = psys.GetVec ( EMIT_POS );
-	obj_angs = psys.GetVec ( EMIT_ANG );
-	obj_dang = psys.GetVec ( EMIT_RATE );
-}
-
-
 void keyboard_func ( unsigned char key, int x, int y )
 {
+	// m: run sim with double particles; n run sim with half
 	switch( key ) {
 	case 'M': case 'm': {
 		psys_nmax *= 2;
@@ -326,74 +269,33 @@ void keyboard_func ( unsigned char key, int x, int y )
 		if ( psys_nmax < 64 ) psys_nmax = 64;		
 		psys.SPH_CreateExample ( psys_demo, psys_nmax );
 		} break;
-	case '0':
-		UpdateEmit ();
-		psys_freq++;	
-		psys.SetVec ( EMIT_RATE, Vector3DF(psys_freq, psys_rate, 0) );
-		break;  
-	case '9':
-		UpdateEmit ();
-		psys_freq--;  if ( psys_freq < 0 ) psys_freq = 0;
-		psys.SetVec ( EMIT_RATE, Vector3DF(psys_freq, psys_rate, 0) );
-		break;
-	case '.': case '>':
-		UpdateEmit ();
-		if ( ++psys_rate > 100 ) psys_rate = 100;
-		psys.SetVec ( EMIT_RATE, Vector3DF(psys_freq, psys_rate, 0) );
-		break;
-	case ',': case '<':
-		UpdateEmit ();
-		if ( --psys_rate < 0 ) psys_rate = 0;
-		psys.SetVec ( EMIT_RATE, Vector3DF(psys_freq, psys_rate, 0) );
-	break;
-	case 'g': case 'G':	psys.Toggle ( USE_CUDA );	break;
-	case 'f': case 'F':	mode = MODE_DOF;	break;
-
-	case 'z': case 'Z':	mode = MODE_CAM_TO;	break;
-	case 'c': case 'C':	mode = MODE_CAM;	break; 
 	case 'h': case 'H':	bHelp = !bHelp; break;
-	case 'i': case 'I':	
-		UpdateEmit ();
-		mode = MODE_OBJPOS;	
-		break;
-	case 'o': case 'O':	
-		UpdateEmit ();
-		mode = MODE_OBJ;
-		break;  
 	case 'x': case 'X':
 		if ( ++iClrMode > 2) iClrMode = 0;
 		psys.SetParam ( CLR_MODE, iClrMode );
 		break;
-	case 'l': case 'L':	mode = MODE_LIGHTPOS;	break;
 	case 'd': case 'D': {
 		int d = psys.GetParam ( PNT_DRAWMODE ) + 1;
 		if ( d > 2 ) d = 0;
 		psys.SetParam ( PNT_DRAWMODE, d );
-		} break;	
+		} break;
 	case 's': case 'S':	if ( ++iShade > 2 ) iShade = 0;		break;
 	case 27:			    exit( 0 ); break;
-	
 	case '`':
 		bRec = !bRec; break;
-
 	case ' ':		
 		//psys.Run (); ptris.Rebuild (); break;
 		bPause = !bPause;	break;
-
-	case '\'': case ';':	psys.SPH_CreateExample ( psys_demo, psys_nmax ); break;
-	case 'r': case 'R':		psys.SPH_CreateExample ( psys_demo, psys_nmax ); break;  
 	case '[':
 		psys_demo--;
 		if (psys_demo < 0 ) psys_demo = 10;
 		psys.SPH_CreateExample ( psys_demo, psys_nmax );
-		UpdateEmit ();
 		break;
 	case ']':
 		psys_demo++;
 		if (psys_demo > 10 ) psys_demo = 0;
 		psys.SPH_CreateExample ( psys_demo, psys_nmax );
-		UpdateEmit ();
-		break;  
+		break;
 	default:
 	break;
   }
@@ -417,73 +319,22 @@ void mouse_move_func ( int x, int y )
 	int dx = x - last_x;
 	int dy = y - last_y;
 
-	switch ( mode ) {
-	case MODE_CAM:
-		if ( dragging == DRAG_LEFT ) {
-			cam_angs.x += dx;
-			cam_angs.y += dy;
-			if ( cam_angs.x >= 360.0 )	cam_angs.x -= 360.0;
-			if ( cam_angs.x < 0 )		cam_angs.x += 360.0;
-			if ( cam_angs.y >= 180.0 )	cam_angs.y = 180.0;
-			if ( cam_angs.y <= -180.0 )	cam_angs.y = -180.0;
-			printf ( "Cam Ang: %f %f %f\n", cam_angs.x, cam_angs.y, cam_angs.z );
-			printf ( "Cam To:  %f %f %f\n", cam_to.x, cam_to.y, cam_to.z );
-			printf ( "Cam FOV: %f\n", cam_fov);
-		} else if ( dragging == DRAG_RIGHT ) {
-			cam_angs.z += dy*.15;
-			if ( cam_angs.z < 0)		cam_angs.z = 0;
-			printf ( "Cam Ang: %f %f %f\n", cam_angs.x, cam_angs.y, cam_angs.z );
-			printf ( "Cam To:  %f %f %f\n", cam_to.x, cam_to.y, cam_to.z );
-			printf ( "Cam FOV: %f\n", cam_fov );
-		}
-		break;
-	case MODE_CAM_TO:
-		if ( dragging == DRAG_LEFT ) {
-			cam_to.x += dx;
-			cam_to.y += dy;			
-		} else if ( dragging == DRAG_RIGHT ) {
-			cam_to.z += dy*.05;
-			if ( cam_to.z < 0) 	cam_to.z = 0;
-		}
-		break;	
-	case MODE_OBJ:
-		if ( dragging == DRAG_LEFT ) {
-			obj_angs.x -= dx*0.1;
-			obj_angs.y += dy*0.1;
-			printf ( "Obj Angs:  %f %f %f\n", obj_angs.x, obj_angs.y, obj_angs.z );
-			//force_x += dx*.1;
-			//force_y += dy*.1;
-		} else if (dragging == DRAG_RIGHT) {
-			obj_angs.z -= dy*.005;			
-			printf ( "Obj Angs:  %f %f %f\n", obj_angs.x, obj_angs.y, obj_angs.z );
-		}
-		psys.SetVec ( EMIT_ANG, Vector3DF ( obj_angs.x, obj_angs.y, obj_angs.z ) );
-		break;
-	case MODE_OBJPOS:
-		if ( dragging == DRAG_LEFT ) {
-			obj_from.x -= dx*.1;
-			obj_from.y += dy*.1;
-			printf ( "Obj:  %f %f %f\n", obj_from.x, obj_from.y, obj_from.z );
-		} else if (dragging == DRAG_RIGHT) {
-			obj_from.z -= dy*.1;
-			printf ( "Obj:  %f %f %f\n", obj_from.x, obj_from.y, obj_from.z );
-		}
-		psys.SetVec ( EMIT_POS, Vector3DF ( obj_from.x, obj_from.y, obj_from.z ) );
-		//psys.setPos ( obj_x, obj_y, obj_z, obj_ang, obj_tilt, obj_dist );
-		break;
-	case MODE_LIGHTPOS:
-		if ( dragging == DRAG_LEFT ) {
-			light[0].x -= dx*.1;
-			light[0].y += dy*.1;		
-			printf ( "Light: %f %f %f\n", light[0].x, light[0].y, light[0].z );
-		} else if (dragging == DRAG_RIGHT) {
-			light[0].z -= dy*.1;			
-			printf ( "Light: %f %f %f\n", light[0].x, light[0].y, light[0].z );
-		}	
-		#ifdef USE_SHADOWS
-			setShadowLight ( light[0].x, light[0].y, light[0].z, light_to[0].x, light_to[0].y, light_to[0].z, light_fov );
-		#endif
-		break;
+	if ( dragging == DRAG_LEFT ) {
+		cam_angs.x += dx;
+		cam_angs.y += dy;
+		if ( cam_angs.x >= 360.0 )	cam_angs.x -= 360.0;
+		if ( cam_angs.x < 0 )		cam_angs.x += 360.0;
+		if ( cam_angs.y >= 180.0 )	cam_angs.y = 180.0;
+		if ( cam_angs.y <= -180.0 )	cam_angs.y = -180.0;
+		//printf ( "Cam Ang: %f %f %f\n", cam_angs.x, cam_angs.y, cam_angs.z );
+		//printf ( "Cam To:  %f %f %f\n", cam_to.x, cam_to.y, cam_to.z );
+		//printf ( "Cam FOV: %f\n", cam_fov);
+	} else if ( dragging == DRAG_RIGHT ) {
+		cam_angs.z += dy*.15;
+		if ( cam_angs.z < 0)		cam_angs.z = 0;
+		//printf ( "Cam Ang: %f %f %f\n", cam_angs.x, cam_angs.y, cam_angs.z );
+		//printf ( "Cam To:  %f %f %f\n", cam_to.x, cam_to.y, cam_to.z );
+		//printf ( "Cam FOV: %f\n", cam_fov );
 	}
 
 	if ( x < 10 || y < 10 || x > 1000 || y > 700 ) {
@@ -503,9 +354,8 @@ void idle_func ()
 
 void init ()
 {
-	
-	glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);	
-	glHint(GL_POLYGON_SMOOTH_HINT, GL_NICEST);	
+	glHint(GL_LINE_SMOOTH_HINT, GL_FASTEST);	
+	glHint(GL_POLYGON_SMOOTH_HINT, GL_FASTEST);
 
 	srand ( time ( 0x0 ) );
 
@@ -540,21 +390,8 @@ void init ()
 
 	light_fov = 45;
 
-	#ifdef USE_SHADOWS
-		createShadowTextures();
-		createFrameBuffer ();
-		setShadowLight ( light[0].x, light[0].y, light[0].z, light_to[0].x, light_to[0].y, light_to[0].z, light_fov );
-		setShadowLightColor ( .7, .7, .7, 0.2, 0.2, 0.2 );		
-	#endif
-
-	obj_from.x = 0;		obj_from.y = 0;		obj_from.z = 20;		// emitter
-	obj_angs.x = 118.7;	obj_angs.y = 200;	obj_angs.z = 1.0;
-	obj_dang.x = 1;	obj_dang.y = 1;		obj_dang.z = 0;
-
 	psys.Initialize ( BFLUID, psys_nmax );
-	psys.SPH_CreateExample ( 0, psys_nmax );
-	psys.SetVec ( EMIT_ANG, Vector3DF ( obj_angs.x, obj_angs.y, obj_angs.z ) );
-	psys.SetVec ( EMIT_POS, Vector3DF ( obj_from.x, obj_from.y, obj_from.z ) );
+	psys.SPH_CreateExample ( psys_demo, psys_nmax );
 
 	psys.SetParam ( PNT_DRAWMODE, int(bPntDraw ? 1:0) );
 	psys.SetParam ( CLR_MODE, iClrMode );	
@@ -563,10 +400,6 @@ void init ()
 
 int main ( int argc, char **argv )
 {
-	#ifdef BUILD_CUDA
-		// Initialize CUDA
-		cudaInit( argc, argv );
-	#endif
 
 	// set up the window
 	glutInit( &argc, &argv[0] ); 
