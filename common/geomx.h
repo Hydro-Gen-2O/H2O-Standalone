@@ -92,7 +92,6 @@
 		char* RandomElem ( uchar b, href& ndx );
 		char* AddElem ( uchar b, href& pos );
 		int AddElem ( uchar b, char* data );		
-		bool DelElem ( uchar b, int n );
 		char* GetStart ( uchar b )			{ return mBuf[b].data; }
 		char* GetEnd ( uchar b )			{ return mBuf[b].data + mBuf[b].num*mBuf[b].stride; }
 		GeomBuf* GetBuffer ( uchar b )		{ return &mBuf[b]; }
@@ -102,16 +101,7 @@
 		hval* GetHeap ( hpos& num, hpos& max, hpos& free );
 
 		int GetSize ();
-
-		/*int AddRef ( int b, int n, int ref, ushort listpos );
-		int AddRef ( int b, int n, int ref, bool bUseHeap, ushort listpos, ushort width );*/
-		void ClearRefs ( hList& list );
-		hval AddRef ( hval r, hList& list, hval delta  );
-		hpos HeapAlloc ( ushort size, ushort& ret );
-		hpos HeapExpand ( ushort size, ushort& ret  );
-		void HeapAddFree ( hpos pos, int size );
 		
-
 	protected:
 		std::vector< GeomBuf >		mBuf;	
 		std::vector< GeomAttr >		mAttribute;

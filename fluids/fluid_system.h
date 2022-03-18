@@ -58,12 +58,7 @@
 	#define SPH_INITMAX			10
 
 	// Toggles
-	#define	SPH_GRID			0
-	#define SPH_DEBUG			1
 	#define WRAP_X				2
-	#define WALL_BARRIER		3
-	#define LEVY_BARRIER		4
-	#define DRAIN_BARRIER		5
 	
 	#define MAX_PARAM			21
 	#define BFLUID				2
@@ -73,7 +68,7 @@
 		FluidSystem ();
 
 		// Basic Particle System
-		virtual void Initialize ( int mode, int nmax );
+		virtual void Initialize ( int nmax );
 		virtual void Reset ( int nmax );
 		virtual void Run ();
 		virtual void Advance ();
@@ -91,8 +86,6 @@
 		void SPH_ComputePressureSlow ();			// O(n^2)
 		void SPH_ComputePressureGrid ();			// O(kn) - spatial grid
 		
-		void SPH_ComputeForceSlow ();				// O(n^2)
-		void SPH_ComputeForceGrid ();				// O(kn) - spatial grid
 		void SPH_ComputeForceGridNC ();				// O(cn) - neighbor table		
 		
 	private:

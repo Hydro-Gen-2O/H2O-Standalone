@@ -33,139 +33,6 @@ PointSet::PointSet ()
 	Reset ();
 }
 
-int PointSet::GetGridCell ( int x, int y, int z )
-{
-	return (int) ( (z*m_GridRes.y + y)*m_GridRes.x + x);
-}
-
-Point* PointSet::firstGridParticle ( int gc, int& p )
-{
-	m_pcurr = m_Grid [ gc ];
-	if ( m_pcurr == -1 ) return 0x0;
-	p = m_pcurr;
-	return (Point*) (mBuf[0].data + m_pcurr * mBuf[0].stride);
-}
-
-Point* PointSet::nextGridParticle ( int& p )
-{
-	Point* pnt = 0x0;
-	if ( m_pcurr != -1 ) {
-		pnt = (Point*) (mBuf[0].data + m_pcurr * mBuf[0].stride);
-		p = m_pcurr;
-		m_pcurr = pnt->next;
-	}	
-	return pnt;
-}
-
-unsigned short* PointSet::getNeighborTable ( int n, int& cnt )
-{
-	cnt = m_NC[n];
-	if ( cnt == 0 ) return 0x0;
-	return &m_Neighbor[n][0];
-}
-
-float PointSet::GetValue ( float x, float y, float z )
-{
-	float dx, dy, dz, dsq;
-	float sum;
-	int pndx;
-	Point* pcurr;
-	float R2 = 1.8*1.8;
-
-	Grid_FindCells ( Vector3DF(x,y,z), m_GridCellsize/2.0 );
-
-	int cnt = 0;
-	sum = 0.0;
-	for (int cell=0; cell < 8; cell++ ) {
-		if ( m_GridCell[cell] != -1 ) {
-			pndx = m_Grid [ m_GridCell[cell] ];
-			while ( pndx != -1 ) {					
-				pcurr = (Point*) (mBuf[0].data + pndx*mBuf[0].stride);
-				dx = x - pcurr->pos.x;
-				dy = y - pcurr->pos.y;
-				dz = z - pcurr->pos.z;
-				dsq = dx*dx+dy*dy+dz*dz;		
-				if ( dsq < R2 ) sum += R2 / dsq;
-				pndx = pcurr->next;
-			}	
-		}
-	}
-	return sum;	
-}	
-Vector3DF PointSet::GetGradient ( float x, float y, float z )
-{
-	Vector3DF norm;  
-	float dx, dy, dz, dsq;
-	float sum;
-	int pndx;
-	Point* pcurr;
-	float R2 = (m_GridCellsize/2.0)*(m_GridCellsize/2.0);
-
-	Grid_FindCells ( Vector3DF(x,y,z), m_GridCellsize/2.0 );
-
-	int cnt = 0;
-	sum = 0.0;
-	norm.Set (0,0,0);
-	for (int cell=0; cell < 8; cell++ ) {
-		if ( m_GridCell[cell] != -1 ) {
-			pndx = m_Grid [ m_GridCell[cell] ];
-			while ( pndx != -1 ) {					
-				pcurr = (Point*) (mBuf[0].data + pndx*mBuf[0].stride);
-				dx = x - pcurr->pos.x;
-				dy = y - pcurr->pos.y;
-				dz = z - pcurr->pos.z;
-				dsq = dx*dx+dy*dy+dz*dz;				
-				if ( dsq > 0 && dsq < R2 ) {
-					dsq = 2.0*R2 / (dsq*dsq);
-					norm.x += dx * dsq;
-					norm.y += dy * dsq;
-					norm.z += dz * dsq;						
-				}
-				pndx = pcurr->next;
-			}	
-		}
-	}
-	norm.Normalize ();	
-	return norm;
-}
-
-DWORD PointSet::GetColor ( float x, float y, float z )
-{
-	Vector3DF clr;  
-	float dx, dy, dz, dsq;
-	float sum;
-	int pndx;
-	Point* pcurr;
-	float R2 = (m_GridCellsize/2.0)*(m_GridCellsize/2.0);
-
-	Grid_FindCells ( Vector3DF(x,y,z), m_GridCellsize/2.0 );
-
-	int cnt = 0;
-	sum = 0.0;
-	clr.Set (0,0,0);
-	for (int cell=0; cell < 8; cell++ ) {
-		if ( m_GridCell[cell] != -1 ) {
-			pndx = m_Grid [ m_GridCell[cell] ];
-			while ( pndx != -1 ) {					
-				pcurr = (Point*) (mBuf[0].data + pndx*mBuf[0].stride);
-				dx = x - pcurr->pos.x;
-				dy = y - pcurr->pos.y;
-				dz = z - pcurr->pos.z;
-				dsq = dx*dx+dy*dy+dz*dz;				
-				if ( dsq < R2 ) {
-					dsq = 2.0*R2 / (dsq*dsq);					
-					clr.x += RED(pcurr->clr) * dsq;
-					clr.y += GRN(pcurr->clr) * dsq;
-					clr.z += BLUE(pcurr->clr) * dsq;						
-				}
-				pndx = pcurr->next;
-			}	
-		}
-	}
-	clr.Normalize ();
-	return COLORA(clr.x, clr.y, clr.z, 1.0);
-}
-
 void PointSet::Reset ()
 {
 	// Reset number of particles
@@ -180,35 +47,9 @@ void PointSet::Reset ()
 	m_Vec[ PLANE_GRAV_DIR].Set(0,0,-9.8);
 }
 
-void PointSet::Initialize ( int mode, int total )
-{
-	switch (mode) {
-	case BPOINT: {
-		FreeBuffers ();
-		AddBuffer ( BPOINT, sizeof ( Point ), total );
-		AddAttribute ( 0, "pos", sizeof ( Vector3DF ), false );
-		AddAttribute ( 0, "color", sizeof ( DWORD ), false );
-		Reset ();
-		} break;
-	
-	case BPARTICLE: {
-		FreeBuffers ();
-		AddBuffer ( BPARTICLE, sizeof ( Particle ), total );
-		AddAttribute ( 0, "pos", sizeof ( Vector3DF ), false );	
-		AddAttribute ( 0, "color", sizeof ( DWORD ), false );
-		AddAttribute ( 0, "vel", sizeof ( Vector3DF ), false );
-		AddAttribute ( 0, "ndx", sizeof ( unsigned short ), false );
-		AddAttribute ( 0, "age", sizeof ( unsigned short ), false );
-		Reset ();
-		} break;
-	}
-
-
-}
-
 int PointSet::AddPoint ()
 {
-	xref ndx;	
+	xref ndx;
 	AddElem ( 0, ndx );	
 	return ndx;
 }
@@ -279,63 +120,6 @@ void PointSet::Draw ( float* view_mat, float rad )
 	}
 }
 
-void PointSet::Run ()
-{
-	Advance();
-}
-
-void PointSet::Advance ()
-{
-	char* dat;
-	Particle* p;
-	Vector3DF vnext, accel, norm;
-		
-	dat = mBuf[0].data;		
-	for ( int c = 0; c < NumPoints(); c++ ) {		
-		p = (Particle*) dat;
-
-		accel.Set (0, 0, 0);
-
-		// Plane gravity
-		if ( m_Param[PLANE_GRAV] > 0) 
-			accel += m_Vec[PLANE_GRAV_DIR];
-
-		// Point gravity
-		if ( m_Param[POINT_GRAV] > 0 ) {
-			norm.x = ( p->pos.x - m_Vec[POINT_GRAV_POS].x );
-			norm.y = ( p->pos.y - m_Vec[POINT_GRAV_POS].y );
-			norm.z = ( p->pos.z - m_Vec[POINT_GRAV_POS].z );
-			norm.Normalize ();
-			norm *= m_Param[POINT_GRAV];
-			accel -= norm;
-		}
-
-		// Leapfrog Integration ----------------------------
-		vnext = accel;		
-		vnext *= m_DT;
-		vnext += p->vel;								// v(t+1/2) = v(t-1/2) + a(t) dt
-		p->vel_eval = p->vel;
-		p->vel_eval += vnext;
-		p->vel_eval *= 0.5;								// v(t+1) = [v(t-1/2) + v(t+1/2)] * 0.5		used to compute forces later
-		p->vel = vnext;
-		vnext *= m_DT;
-		p->pos += vnext;								// p(t+1) = p(t) + v(t+1/2) dt
-
-		// Euler integration -------------------------------
-		// accel += m_Gravity;
-		// accel *= m_DT;
-		// mParticles[c].vel += accel;				// v(t+1) = v(t) + a(t) dt
-		// mParticles[c].vel_eval += accel;
-		// mParticles[c].vel_eval *= m_DT/d;
-		// mParticles[c].pos += mParticles[c].vel_eval;
-		// mParticles[c].vel_eval = mParticles[c].vel; 
-		
-		dat += mBuf[0].stride;
-	}
-
-	m_Time += m_DT;
-}
-
 // Ideal grid cell size (gs) = 2 * smoothing radius = 0.02*2 = 0.04
 // Ideal domain size = k*gs/d = k*0.02*2/0.005 = k*8 = {8, 16, 24, 32, 40, 48, ..}
 //    (k = number of cells, gs = cell size, d = simulation scale)
@@ -367,55 +151,6 @@ void PointSet::Grid_Setup ( Vector3DF min, Vector3DF max, float sim_scale, float
 		m_Grid.push_back ( -1 );
 		m_GridCnt.push_back ( 0 );
 	}
-
-}
-
-void PointSet::Grid_Draw ( float* view_mat )
-{
-	float clr;
-	int cx, cy, cz;
-	float x1, y1, z1;
-	float x2, y2, z2;
-	int g = 0;
-
-	glLoadMatrixf ( view_mat );
-	glColor3f ( 0.7, 0.7, 0.7 );
-
-	glBegin ( GL_LINES );	
-
-	cz = 0;
-	//for ( cz = 0; cz < m_GridRes.z; cz++ ) {
-	for ( cy = 0; cy < m_GridRes.y; cy++ ) {
-	for ( cx = 0; cx < m_GridRes.x; cx++ ) {
-		// Cell is not empty. Process it.
-		//if ( m_Grid[g] != 0x0 ) {
-		//	clr = m_GridCnt[g]/30.0;
-			clr = 0.25;
-			if ( clr <0.25) clr =0.25;
-			if ( clr >1) clr =1 ;
-			glColor3f ( clr, clr, clr );
-			x1 = (cx * m_GridDelta.x) + m_GridMin.x;		x2 = ((cx+1) * m_GridDelta.x) + m_GridMin.x;
-			y1 = (cy * m_GridDelta.y) + m_GridMin.y;		y2 = ((cy+1) * m_GridDelta.y) + m_GridMin.y;
-			z1 = (cz * m_GridDelta.z) + m_GridMin.z;		z2 = ((cz+1) * m_GridDelta.z) + m_GridMin.z;
-			glVertex3f ( x1, y1, z1 );			glVertex3f ( x2, y1, z1 );
-			glVertex3f ( x2, y1, z1 );			glVertex3f ( x2, y2, z1 );
-			glVertex3f ( x2, y2, z1 );			glVertex3f ( x1, y2, z1 );
-			glVertex3f ( x1, y2, z1 );			glVertex3f ( x1, y1, z1 );
-			glVertex3f ( x1, y1, z2 );			glVertex3f ( x2, y1, z2 );
-			glVertex3f ( x2, y1, z2 );			glVertex3f ( x2, y2, z2 );
-			glVertex3f ( x2, y2, z2 );			glVertex3f ( x1, y2, z2 );
-			glVertex3f ( x1, y2, z2 );			glVertex3f ( x1, y1, z2 );
-			glVertex3f ( x1, y1, z1 );			glVertex3f ( x1, y1, z2 );
-			glVertex3f ( x1, y2, z1 );			glVertex3f ( x1, y2, z2 );
-			glVertex3f ( x2, y2, z1 );			glVertex3f ( x2, y2, z2 );
-			glVertex3f ( x2, y1, z1 );			glVertex3f ( x2, y1, z2 );
-		//}
-		g++;
-	}
-	}
-	//}
-
-	glEnd ();
 }
 
 void PointSet::Grid_InsertParticles ()
@@ -449,18 +184,6 @@ void PointSet::Grid_InsertParticles ()
 		}
 		n++;
 	}
-}
-
-int PointSet::Grid_FindCell ( Vector3DF p )
-{
-	int gc;
-	Vector3DI cell;
-	cell.x = (int) (p.x - m_GridMin.x) * m_GridDelta.x;
-	cell.y = (int) (p.y - m_GridMin.y) * m_GridDelta.y;
-	cell.z = (int) (p.z - m_GridMin.z) * m_GridDelta.z;
-	gc = (int)( (cell.z*m_GridRes.y + cell.y)*m_GridRes.x + cell.x);
-	if ( gc < 0 || gc > m_GridTotal ) return -1;
-	return gc;
 }
 
 void PointSet::Grid_FindCells ( Vector3DF p, float radius )

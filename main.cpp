@@ -34,11 +34,6 @@ extern "C" { FILE __iob_func[3] = { *stdin,*stdout,*stderr }; }
 #include "gl_helper.h"
 
 #include <gl/glut.h>
-
-bool bTiming = false;
-bool bRec = false;
-int mFrame = 0;
-
 // Globals
 FluidSystem			psys;
 
@@ -46,12 +41,9 @@ float window_width  = 1024;
 float window_height = 768;
 
 Vector3DF	cam_from, cam_angs, cam_to;			// Camera stuff
-Vector3DF	light[2], light_to[2];				// Light stuff
-float		light_fov, cam_fov;	
+float		cam_fov;	
 
-int		psys_rate = 0;							// Particle stuff
-int		psys_freq = 1;
-int		psys_demo = 0;
+int		psys_demo = -1; // CHANGE TO CHANGE  SIM TYPE
 int		psys_nmax = 4096;
 
 bool	bHelp = false;						// Toggles
@@ -65,7 +57,6 @@ float view_matrix[16];					// View matrix (V)
 float model_matrix[16];					// Model matrix (M)
 float proj_matrix[16];					// Projective matrix
 
-
 // Different things we can move around
 
 // Mouse control
@@ -74,16 +65,6 @@ float proj_matrix[16];					// Projective matrix
 #define DRAG_RIGHT		2
 int		last_x = -1, last_y = -1;		// mouse vars
 int		dragging = 0;
-int		psel;
-
-GLuint	screen_id;
-GLuint	depth_id;
-
-
-
-GLuint screenBufferObject;
-GLuint depthBufferObject;
-GLuint envid;
 
 void drawScene ( float* viewmat, bool bShade )
 {
@@ -97,18 +78,11 @@ void drawScene ( float* viewmat, bool bShade )
 		spec[0] = 1.0f; spec[1] = 1.0f; spec[2] = 1.0f; spec[3] = 1.0f;
 		glMaterialfv (GL_FRONT_AND_BACK, GL_DIFFUSE, &diff[0]);
 		glMaterialfv (GL_FRONT_AND_BACK, GL_SPECULAR, &spec[0]);
-		glMaterialfv (GL_FRONT_AND_BACK, GL_SHININESS, &shininess);		
+		glMaterialfv (GL_FRONT_AND_BACK, GL_SHININESS, &shininess);
 		glColorMaterial ( GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE );
 
 		glColor3f ( 1, 1, 1 );
 		glLoadMatrixf ( viewmat );
-		glBegin ( GL_QUADS );
-		glNormal3f ( 0, 0, 1 );
-		glVertex3f ( -1000, -1000, 0.0 );
-		glVertex3f ( 1000, -1000, 0.0 );
-		glVertex3f ( 1000, 1000, 0.0 );
-		glVertex3f ( -1000, 1000, 0.0 );
-		glEnd ();
 		glBegin ( GL_LINES );
 		for (float n=-100; n <= 100; n += 20.0 ) {
 			glVertex3f ( -100, n, 0.1 );
@@ -119,7 +93,7 @@ void drawScene ( float* viewmat, bool bShade )
 		glEnd ();
 
 		psys.Draw ( &viewmat[0], 0.8 );				// Draw particles		
-
+		psys.SPH_DrawDomain();
 	} else {
 		glDisable ( GL_LIGHTING );
 		psys.Draw ( &viewmat[0], 0.55 );			// Draw particles
@@ -128,8 +102,6 @@ void drawScene ( float* viewmat, bool bShade )
 
 void draw2D ()
 {
-	
-	mint::Time start, stop;
 	glDisable ( GL_LIGHTING );  
 	glDisable ( GL_DEPTH_TEST );
 
@@ -209,21 +181,13 @@ void computeView ()
 
 void display () 
 {
-	mint::Time start, stop;
-	
 	// Do simulation!
 	if ( !bPause ) psys.Run ();
 
-	measureFPS ();
-
 	glEnable ( GL_DEPTH_TEST );
 
-	// Render depth map shadows
-	start.SetSystemTime ( ACC_NSEC );
-
 	// Clear frame buffer
-	if ( iShade<=1 ) 	glClearColor( 0.29, 0.29, 0.29, 1.0 );
-	else				glClearColor ( 0, 0, 0, 0 );
+	glClearColor ( 0, 0, 0, 0 );
 	glClear (GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glDisable ( GL_CULL_FACE );
 	glShadeModel ( GL_SMOOTH );
@@ -233,13 +197,10 @@ void display ()
 	computeProjection ();
 	computeView ();
 
-	// Draw 3D	
-	start.SetSystemTime ( ACC_NSEC );
+	// Draw 3D
 	glEnable ( GL_LIGHTING );  
 	glLoadMatrixf ( view_matrix );	
 	drawScene ( view_matrix, true );
-	if ( bTiming) { stop.SetSystemTime ( ACC_NSEC ); stop = stop - start; printf ( "SCENE: %s\n", stop.GetReadableTime().c_str() ); }
-
 	// Draw 2D overlay
 	draw2D ();
  
@@ -280,9 +241,6 @@ void keyboard_func ( unsigned char key, int x, int y )
 		psys.SetParam ( PNT_DRAWMODE, d );
 		} break;
 	case 's': case 'S':	if ( ++iShade > 2 ) iShade = 0;		break;
-	case 27:			    exit( 0 ); break;
-	case '`':
-		bRec = !bRec; break;
 	case ' ':		
 		//psys.Run (); ptris.Rebuild (); break;
 		bPause = !bPause;	break;
@@ -382,15 +340,7 @@ void init ()
 	cam_to.x = 0;		cam_to.y = 0;		cam_to.z = 5;
 	cam_fov = 35.0;
 
-	light[0].x = 39;		light[0].y = -60;	light[0].z = 43;
-	light_to[0].x = 0;	light_to[0].y = 0;	light_to[0].z = 0;
-
-	light[1].x = 15;		light[1].y = -5;	light[1].z = 145;	
-	light_to[1].x = 0;	light_to[1].y = 0;	light_to[1].z = 0;  
-
-	light_fov = 45;
-
-	psys.Initialize ( BFLUID, psys_nmax );
+	psys.Initialize ( psys_nmax );
 	psys.SPH_CreateExample ( psys_demo, psys_nmax );
 
 	psys.SetParam ( PNT_DRAWMODE, int(bPntDraw ? 1:0) );
@@ -400,8 +350,6 @@ void init ()
 
 int main ( int argc, char **argv )
 {
-
-	// set up the window
 	glutInit( &argc, &argv[0] ); 
 	glutInitDisplayMode( GLUT_RGB | GLUT_DOUBLE | GLUT_DEPTH );
 	glutInitWindowPosition( 100, 100 );

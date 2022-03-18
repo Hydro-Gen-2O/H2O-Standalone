@@ -24,7 +24,6 @@
 #include <gl/glut.h>
 
 #include "common_defs.h"
-#include "mtime.h"
 #include "fluid_system.h"
 
 #define EPSILON			0.00001f			//for collision detection
@@ -33,26 +32,35 @@ FluidSystem::FluidSystem ()
 {
 }
 
-void FluidSystem::Initialize ( int mode, int total )
+void FluidSystem::SPH_DrawDomain()
 {
-	if ( mode != BFLUID ) {
-		printf ( "ERROR: FluidSystem not initialized as BFLUID.\n");
-	}
-	PointSet::Initialize ( mode, total );
-	
+	Vector3DF min, max;
+	min = m_Vec[SPH_VOLMIN];
+	max = m_Vec[SPH_VOLMAX];
+	min.z += 0.5;
+
+	glColor3f(0.0, 0.0, 1.0);
+	glBegin(GL_LINES);
+	glVertex3f(min.x, min.y, min.z);	glVertex3f(max.x, min.y, min.z);
+	glVertex3f(min.x, max.y, min.z);	glVertex3f(max.x, max.y, min.z);
+	glVertex3f(min.x, min.y, min.z);	glVertex3f(min.x, max.y, min.z);
+	glVertex3f(max.x, min.y, min.z);	glVertex3f(max.x, max.y, min.z);
+	glEnd();
+}
+
+
+void FluidSystem::Initialize ( int total )
+{
 	FreeBuffers ();
 	AddBuffer ( BFLUID, sizeof ( Fluid ), total );
 	AddAttribute ( 0, "pos", sizeof ( Vector3DF ), false );	
 	AddAttribute ( 0, "color", sizeof ( DWORD ), false );
 	AddAttribute ( 0, "vel", sizeof ( Vector3DF ), false );
 	AddAttribute ( 0, "ndx", sizeof ( unsigned short ), false );
-	AddAttribute ( 0, "age", sizeof ( unsigned short ), false );
 
 	AddAttribute ( 0, "pressure", sizeof ( double ), false );
 	AddAttribute ( 0, "density", sizeof ( double ), false );
 	AddAttribute ( 0, "sph_force", sizeof ( Vector3DF ), false );
-	AddAttribute ( 0, "next", sizeof ( Fluid* ), false );
-	AddAttribute ( 0, "tag", sizeof ( bool ), false );		
 		
 	SPH_Setup ();
 	Reset ( total );	
@@ -73,9 +81,6 @@ void FluidSystem::Reset ( int nmax )
 	m_Param [ FORCE_XMAX_SIN ] = 0.0;
 	m_Param [ FORCE_XMIN_SIN ] = 0.0;	
 	m_Toggle [ WRAP_X ] = false;
-	m_Toggle [ WALL_BARRIER ] = false;
-	m_Toggle [ LEVY_BARRIER ] = false;
-	m_Toggle [ DRAIN_BARRIER ] = false;
 	m_Param [ SPH_INTSTIFF ] = 1.00;
 	m_Param [ SPH_VISC ] = 0.2;
 	m_Param [ SPH_INTSTIFF ] = 0.50;
@@ -118,52 +123,11 @@ int FluidSystem::AddPointReuse ()
 }
 
 void FluidSystem::Run ()
-{
-	bool bTiming = false; // SET TRUE TO VIEW TIMES
-
-	mint::Time start, stop;
-	
-	float ss = m_Param [ SPH_PDIST ] / m_Param[ SPH_SIMSCALE ];		// simulation scale (not Schutzstaffel)
-	
-	#ifdef NOGRID
-		// Slow method - O(n^2)
-		SPH_ComputePressureSlow ();
-		SPH_ComputeForceSlow ();
-	#else
-			start.SetSystemTime ( ACC_NSEC );
-			Grid_InsertParticles ();
-			if ( bTiming) { stop.SetSystemTime ( ACC_NSEC ); stop = stop - start; printf ( "INSERT: %s\n", stop.GetReadableTime().c_str() ); }
-		
-			start.SetSystemTime ( ACC_NSEC );
-			SPH_ComputePressureGrid ();
-			if ( bTiming) { stop.SetSystemTime ( ACC_NSEC ); stop = stop - start; printf ( "PRESS: %s\n", stop.GetReadableTime().c_str() ); }
-
-			start.SetSystemTime ( ACC_NSEC );
-			SPH_ComputeForceGridNC ();		
-			if ( bTiming) { stop.SetSystemTime ( ACC_NSEC ); stop = stop - start; printf ( "FORCE: %s\n", stop.GetReadableTime().c_str() ); }
-
-			start.SetSystemTime ( ACC_NSEC );
-			Advance();
-			if ( bTiming) { stop.SetSystemTime ( ACC_NSEC ); stop = stop - start; printf ( "ADV: %s\n", stop.GetReadableTime().c_str() ); }
-	#endif
-}
-
-
-
-void FluidSystem::SPH_DrawDomain ()
-{
-	Vector3DF min, max;
-	min = m_Vec[SPH_VOLMIN];
-	max = m_Vec[SPH_VOLMAX];
-	min.z += 0.5;
-
-	glColor3f ( 0.0, 0.0, 1.0 );
-	glBegin ( GL_LINES );
-	glVertex3f ( min.x, min.y, min.z );	glVertex3f ( max.x, min.y, min.z );
-	glVertex3f ( min.x, max.y, min.z );	glVertex3f ( max.x, max.y, min.z );
-	glVertex3f ( min.x, min.y, min.z );	glVertex3f ( min.x, max.y, min.z );
-	glVertex3f ( max.x, min.y, min.z );	glVertex3f ( max.x, max.y, min.z );
-	glEnd ();
+{	
+	Grid_InsertParticles ();
+	SPH_ComputePressureGrid ();
+	SPH_ComputeForceGridNC ();
+	Advance();
 }
 
 void FluidSystem::Advance ()
@@ -202,8 +166,7 @@ void FluidSystem::Advance ()
 		}		
 	
 		// Boundary Conditions
-
-		// Z-axis walls
+		// Z-axis walls (floor)
 		diff = 2 * radius - ( p->pos.z - min.z - (p->pos.x - m_Vec[SPH_VOLMIN].x) * m_Param[BOUND_ZMIN_SLOPE] )*ss;
 		if (diff > EPSILON ) {			
 			norm.Set ( -m_Param[BOUND_ZMIN_SLOPE], 0, 1.0 - m_Param[BOUND_ZMIN_SLOPE] );
@@ -250,35 +213,6 @@ void FluidSystem::Advance ()
 			accel.x += adj * norm.x; accel.y += adj * norm.y; accel.z += adj * norm.z;
 		}
 
-		// Wall barrier
-		if ( m_Toggle[WALL_BARRIER] ) {
-			diff = 2 * radius - ( p->pos.x - 0 )*ss;					
-			if (diff < 2*radius && diff > EPSILON && fabs(p->pos.y) < 3 && p->pos.z < 10) {
-				norm.Set ( 1.0, 0, 0 );
-				adj = 2*stiff * diff - damp * norm.Dot ( p->vel_eval ) ;	
-				accel.x += adj * norm.x; accel.y += adj * norm.y; accel.z += adj * norm.z;					
-			}
-		}
-		
-		// Levy barrier
-		if ( m_Toggle[LEVY_BARRIER] ) {
-			diff = 2 * radius - ( p->pos.x - 0 )*ss;					
-			if (diff < 2*radius && diff > EPSILON && fabs(p->pos.y) > 5 && p->pos.z < 10) {
-				norm.Set ( 1.0, 0, 0 );
-				adj = 2*stiff * diff - damp * norm.Dot ( p->vel_eval ) ;	
-				accel.x += adj * norm.x; accel.y += adj * norm.y; accel.z += adj * norm.z;					
-			}
-		}
-		// Drain barrier
-		if ( m_Toggle[DRAIN_BARRIER] ) {
-			diff = 2 * radius - ( p->pos.z - min.z-15 )*ss;
-			if (diff < 2*radius && diff > EPSILON && (fabs(p->pos.x)>3 || fabs(p->pos.y)>3) ) {
-				norm.Set ( 0, 0, 1);
-				adj = stiff * diff - damp * norm.Dot ( p->vel_eval );
-				accel.x += adj * norm.x; accel.y += adj * norm.y; accel.z += adj * norm.z;
-			}
-		}
-
 		// Plane gravity
 		if ( m_Param[PLANE_GRAV] > 0) 
 			accel += m_Vec[PLANE_GRAV_DIR];
@@ -316,7 +250,6 @@ void FluidSystem::Advance ()
 			p->clr = COLORA ( v, 1-v, 0, 1 );
 		}
 
-
 		// Euler integration -------------------------------
 		/* accel += m_Gravity;
 		accel *= m_DT;
@@ -326,7 +259,6 @@ void FluidSystem::Advance ()
 		p->pos += p->vel_eval;
 		p->vel_eval = p->vel;  */	
 
-
 		if ( m_Toggle[WRAP_X] ) {
 			diff = p->pos.x - (m_Vec[SPH_VOLMIN].x + 2);			// -- Simulates object in center of flow
 			if ( diff <= 0 ) {
@@ -335,7 +267,6 @@ void FluidSystem::Advance ()
 			}
 		}	
 	}
-
 	m_Time += m_DT;
 }
 
@@ -379,9 +310,6 @@ void FluidSystem::SPH_Setup ()
 	m_Param [ SPH_EXTDAMP ] =		256.0;
 	m_Param [ SPH_LIMIT ] =			200.0;			// m / s
 
-	m_Toggle [ SPH_GRID ] =		false;
-	m_Toggle [ SPH_DEBUG ] =	false;
-
 	SPH_ComputeKernels ();
 }
 
@@ -392,7 +320,7 @@ void FluidSystem::SPH_ComputeKernels ()
 	m_Poly6Kern = 315.0f / (64.0f * 3.141592 * pow( m_Param[SPH_SMOOTHRADIUS], 9) );	// Wpoly6 kernel (denominator part) - 2003 Muller, p.4
 	m_SpikyKern = -45.0f / (3.141592 * pow( m_Param[SPH_SMOOTHRADIUS], 6) );			// Laplacian of viscocity (denominator): PI h^6
 	m_LapKern = 45.0f / (3.141592 * pow( m_Param[SPH_SMOOTHRADIUS], 6) );
-}
+} // spiky grad, viscosity lap : -45, 45
 
 void FluidSystem::SPH_CreateExample ( int n, int nmax )
 {
@@ -402,120 +330,25 @@ void FluidSystem::SPH_CreateExample ( int n, int nmax )
 	Reset ( nmax );
 	
 	switch ( n ) {
+	case -1:		// fluid drop
+		m_Vec[SPH_VOLMIN].Set(-30, -30, 0);
+		m_Vec[SPH_VOLMAX].Set(30, 30, 40);
+		m_Vec[SPH_INITMIN].Set(-20, -26, 10);
+		m_Vec[SPH_INITMAX].Set(20, 26, 40);
+		break;
 	case 0:		// Wave pool
-				
 		//-- TEST CASE: 2x2x2 grid, 32 particles.  NOTE: Set PRADIUS to 0.0004 to reduce wall influence
-		//     grid 0:    3*3*2 = 18 particles
-		//     grid 1,2:  3*1*2 =  6 particles
-		//     grid 3:    1*1*2 =  2 particles
-		//     grid 4,5,6:    0 =  0 particles
-		/*m_Vec [ SPH_VOLMIN ].Set ( -2.5, -2.5, 0 );
-		m_Vec [ SPH_VOLMAX ].Set ( 2.5, 2.5, 5.0 );	
-		m_Vec [ SPH_INITMIN ].Set ( -2.5, -2.5, 0 );	
-		m_Vec [ SPH_INITMAX ].Set ( 2.5, 2.5, 1.6 );*/  
-		
-		m_Vec [ SPH_VOLMIN ].Set ( -30, -30, 0 );
-		m_Vec [ SPH_VOLMAX ].Set ( 30, 30, 40 );		
-
-		//m_Vec [ SPH_INITMIN ].Set ( -5, -5, 10 );
-		//m_Vec [ SPH_INITMAX ].Set ( 5, 5, 20 );
-		
-		m_Vec [ SPH_INITMIN ].Set ( -20, -26, 10 );
-		m_Vec [ SPH_INITMAX ].Set ( 20, 26, 40 );
+		m_Vec[SPH_VOLMIN].Set(-30, -30, 0);
+		m_Vec[SPH_VOLMAX].Set(30, 30, 40);
+		m_Vec[SPH_INITMIN].Set(-20, -26, 10);
+		m_Vec[SPH_INITMAX].Set(20, 26, 40);
 
 		m_Param [ FORCE_XMIN_SIN ] = 12.0;
 		m_Param [ BOUND_ZMIN_SLOPE ] = 0.05;
 		break;
-	case 1:		// Dam break
-		m_Vec [ SPH_VOLMIN ].Set ( -30, -14, 0 );
-		m_Vec [ SPH_VOLMAX ].Set ( 30, 14, 60 );
-		m_Vec [ SPH_INITMIN ].Set ( 0, -13, 0 );
-		m_Vec [ SPH_INITMAX ].Set ( 29, 13, 30 );		
-		m_Vec [ PLANE_GRAV_DIR ].Set ( 0.0, 0, -9.8 );
-		break;
-	case 2:		// Dual-Wave pool
-		m_Vec [ SPH_VOLMIN ].Set ( -60, -5, 0 );
-		m_Vec [ SPH_VOLMAX ].Set ( 60, 5, 50 );
-		m_Vec [ SPH_INITMIN ].Set ( -46, -5, 0 );
-		m_Vec [ SPH_INITMAX ].Set ( 46, 5, 15 );
-		m_Param [ FORCE_XMIN_SIN ] = 8.0;
-		m_Param [ FORCE_XMAX_SIN ] = 8.0;
-		m_Vec [ PLANE_GRAV_DIR ].Set ( 0.0, 0, -9.8 );
-		break;
-	case 3:		// Swirl Stream
-		m_Vec [ SPH_VOLMIN ].Set ( -30, -30, 0 );
-		m_Vec [ SPH_VOLMAX ].Set ( 30, 30, 50 );
-		m_Vec [ SPH_INITMIN ].Set ( -30, -30, 0 );
-		m_Vec [ SPH_INITMAX ].Set ( 30, 30, 40 );
-		m_Vec [ PLANE_GRAV_DIR ].Set ( 0.0, 0, -9.8 );
-		break;
-	case 4:		// Shockwave
-		m_Vec [ SPH_VOLMIN ].Set ( -60, -15, 0 );
-		m_Vec [ SPH_VOLMAX ].Set ( 60, 15, 50 );
-		m_Vec [ SPH_INITMIN ].Set ( -59, -14, 0 );
-		m_Vec [ SPH_INITMAX ].Set ( 59, 14, 30 );
-		m_Vec [ PLANE_GRAV_DIR ].Set ( 0.0, 0, -9.8 );
-		m_Toggle [ WALL_BARRIER ] = true;
-		m_Toggle [ WRAP_X ] = true;
-		break;
-	case 5:		// Zero gravity
-		m_Vec [ SPH_VOLMIN ].Set ( -40, -40, 0 );
-		m_Vec [ SPH_VOLMAX ].Set ( 40, 40, 50 );
-		m_Vec [ SPH_INITMIN ].Set ( -20, -20, 20 );
-		m_Vec [ SPH_INITMAX ].Set ( 20, 20, 40 );
-		m_Vec [ PLANE_GRAV_DIR ].Set ( 0, 0, 0 );
-		m_Param [ SPH_INTSTIFF ] = 0.20;		
-		break;
-	case 6:		// Point gravity		
-		m_Vec [ SPH_VOLMIN ].Set ( -40, -40, 0 );
-		m_Vec [ SPH_VOLMAX ].Set ( 40, 40, 50 );
-		m_Vec [ SPH_INITMIN ].Set ( -20, -20, 20 );
-		m_Vec [ SPH_INITMAX ].Set ( 20, 20, 40 );
-		m_Param [ SPH_INTSTIFF ] = 0.50;
-		m_Vec [ POINT_GRAV_POS ].Set ( 0, 0, 25 );
-		m_Vec [ PLANE_GRAV_DIR ].Set ( 0, 0, 0 );
-		m_Param [ POINT_GRAV ] = 3.5;
-		break;
-	case 7:		// Levy break
-		m_Vec [ SPH_VOLMIN ].Set ( -40, -40, 0 );
-		m_Vec [ SPH_VOLMAX ].Set ( 40, 40, 50 );
-		m_Vec [ SPH_INITMIN ].Set ( 10, -40, 0 );
-		m_Vec [ SPH_INITMAX ].Set ( 40, 40, 50 );
-		m_Toggle [ LEVY_BARRIER ] = true;
-		m_Param [ BOUND_ZMIN_SLOPE ] = 0.1;
-		m_Vec [ PLANE_GRAV_DIR ].Set ( 0.0, 0, -9.8 );
-		break;
-	case 8:		// Drain
-		m_Vec [ SPH_VOLMIN ].Set ( -20, -20, 0 );
-		m_Vec [ SPH_VOLMAX ].Set ( 20, 20, 50 );
-		m_Vec [ SPH_INITMIN ].Set ( -15, -20, 20 );
-		m_Vec [ SPH_INITMAX ].Set ( 20, 20, 50 );
-		m_Toggle [ DRAIN_BARRIER ] = true;
-		m_Vec [ PLANE_GRAV_DIR ].Set ( 0.0, 0, -9.8 );
-		break;
-	case 9:			// Tumbler
-		m_Vec [ SPH_VOLMIN ].Set ( -30, -30, 0 );
-		m_Vec [ SPH_VOLMAX ].Set ( 30, 30, 50 );
-		m_Vec [ SPH_INITMIN ].Set ( 24, -29, 20 );
-		m_Vec [ SPH_INITMAX ].Set ( 29, 29, 40 );
-		m_Param [ SPH_VISC ] = 0.1;		
-		m_Param [ SPH_INTSTIFF ] = 0.50;
-		m_Param [ SPH_EXTSTIFF ] = 8000;
-		//m_Param [ SPH_SMOOTHRADIUS ] = 0.01;
-		m_Param [ BOUND_ZMIN_SLOPE ] = 0.4;
-		m_Param [ FORCE_XMIN_SIN ] = 12.00;
-		m_Vec [ PLANE_GRAV_DIR ].Set ( 0.0, 0, -9.8 );
-		break;	
-	case 10:		// Large sim
-		m_Vec [ SPH_VOLMIN ].Set ( -35, -35, 0 );
-		m_Vec [ SPH_VOLMAX ].Set ( 35, 35, 60 );
-		m_Vec [ SPH_INITMIN ].Set ( -5, -35, 0 );
-		m_Vec [ SPH_INITMAX ].Set ( 30, 0, 60 );
-		m_Vec [ PLANE_GRAV_DIR ].Set ( 0.0, 0, -9.8 );
-		break;
 	}	
 
-	SPH_ComputeKernels ();
+	SPH_ComputeKernels();
 
 	m_Param [ SPH_SIMSIZE ] = m_Param [ SPH_SIMSCALE ] * (m_Vec[SPH_VOLMAX].z - m_Vec[SPH_VOLMIN].z);
 	m_Param [ SPH_PDIST ] = pow ( m_Param[SPH_PMASS] / m_Param[SPH_RESTDENSITY], 1/3.0 );	
@@ -526,7 +359,7 @@ void FluidSystem::SPH_CreateExample ( int n, int nmax )
 
 	float cell_size = m_Param[SPH_SMOOTHRADIUS]*2.0;			// Grid cell size (2r)	
 	Grid_Setup ( m_Vec[SPH_VOLMIN], m_Vec[SPH_VOLMAX], m_Param[SPH_SIMSCALE], cell_size, 1.0 );												// Setup grid
-	Grid_InsertParticles ();									// Insert particles
+	Grid_InsertParticles();									// Insert particles
 
 	Vector3DF vmin, vmax;
 	vmin =  m_Vec[SPH_VOLMIN];
@@ -543,9 +376,8 @@ void FluidSystem::SPH_ComputePressureSlow ()
 	Fluid *p, *q;
 	int cnt = 0;
 	double dx, dy, dz, sum, dsq, c;
-	double d, d2, mR, mR2;
+	double d, mR, mR2;
 	d = m_Param[SPH_SIMSCALE];
-	d2 = d*d;
 	mR = m_Param[SPH_SMOOTHRADIUS];
 	mR2 = mR*mR;	
 
@@ -587,12 +419,11 @@ void FluidSystem::SPH_ComputePressureGrid ()
 	int pndx;
 	int i, cnt = 0;
 	float dx, dy, dz, sum, dsq, c;
-	float d, d2, mR, mR2;
+	float d, mR, mR2;
 	float radius = m_Param[SPH_SMOOTHRADIUS] / m_Param[SPH_SIMSCALE];
 	d = m_Param[SPH_SIMSCALE];
-	d2 = d*d;
 	mR = m_Param[SPH_SMOOTHRADIUS];
-	mR2 = mR*mR;	
+	mR2 = mR*mR;
 
 	dat1_end = mBuf[0].data + NumPoints()*mBuf[0].stride;
 	i = 0;
@@ -630,109 +461,6 @@ void FluidSystem::SPH_ComputePressureGrid ()
 		p->density = sum * m_Param[SPH_PMASS] * m_Poly6Kern ;	
 		p->pressure = ( p->density - m_Param[SPH_RESTDENSITY] ) * m_Param[SPH_INTSTIFF];		
 		p->density = 1.0f / p->density;		
-	}
-}
-
-// Compute Forces - Very slow, but simple. O(n^2)
-void FluidSystem::SPH_ComputeForceSlow ()
-{
-	char *dat1, *dat1_end;
-	char *dat2, *dat2_end;
-	Fluid *p, *q;
-	Vector3DF force, fcurr;
-	register double pterm, vterm, dterm;
-	double c, r, d, sum, dsq;
-	double dx, dy, dz;
-	double mR, mR2, visc;
-
-	d = m_Param[SPH_SIMSCALE];
-	mR = m_Param[SPH_SMOOTHRADIUS];
-	mR2 = (mR*mR);
-	visc = m_Param[SPH_VISC];
-	vterm = m_LapKern * visc;
-
-	dat1_end = mBuf[0].data + NumPoints()*mBuf[0].stride;
-	for ( dat1 = mBuf[0].data; dat1 < dat1_end; dat1 += mBuf[0].stride ) {
-		p = (Fluid*) dat1;
-
-		sum = 0.0;
-		force.Set ( 0, 0, 0 );
-		
-		dat2_end = mBuf[0].data + NumPoints()*mBuf[0].stride;
-		for ( dat2 = mBuf[0].data; dat2 < dat2_end; dat2 += mBuf[0].stride ) {
-			q = (Fluid*) dat2;
-
-			if ( p == q ) continue;
-			dx = ( p->pos.x - q->pos.x )*d;			// dist in cm
-			dy = ( p->pos.y - q->pos.y )*d;
-			dz = ( p->pos.z - q->pos.z )*d;
-			dsq = (dx*dx + dy*dy + dz*dz);
-			if ( mR2 > dsq ) {
-				r = sqrt ( dsq );
-				c = (mR - r);
-				pterm = -0.5f * c * m_SpikyKern * ( p->pressure + q->pressure) / r;
-				dterm = c * p->density * q->density;
-				force.x += ( pterm * dx + vterm * (q->vel_eval.x - p->vel_eval.x) ) * dterm;
-				force.y += ( pterm * dy + vterm * (q->vel_eval.y - p->vel_eval.y) ) * dterm;
-				force.z += ( pterm * dz + vterm * (q->vel_eval.z - p->vel_eval.z) ) * dterm;
-			}
-		}			
-		p->sph_force = force;		
-	}
-}
-
-// Compute Forces - Using spatial grid. Faster.
-void FluidSystem::SPH_ComputeForceGrid ()
-{
-	char *dat1, *dat1_end;	
-	Fluid *p;
-	Fluid *pcurr;
-	int pndx;
-	Vector3DF force, fcurr;
-	register double pterm, vterm, dterm;
-	double c, d, dsq, r;
-	double dx, dy, dz;
-	double mR, mR2, visc;
-	float radius = m_Param[SPH_SMOOTHRADIUS] / m_Param[SPH_SIMSCALE];
-
-	d = m_Param[SPH_SIMSCALE];
-	mR = m_Param[SPH_SMOOTHRADIUS];
-	mR2 = (mR*mR);
-	visc = m_Param[SPH_VISC];
-
-	dat1_end = mBuf[0].data + NumPoints()*mBuf[0].stride;
-	for ( dat1 = mBuf[0].data; dat1 < dat1_end; dat1 += mBuf[0].stride ) {
-		p = (Fluid*) dat1;
-
-		force.Set ( 0, 0, 0 );
-
-		Grid_FindCells ( p->pos, radius );
-		for (int cell=0; cell < 8; cell++) {
-			if ( m_GridCell[cell] != -1 ) {
-				pndx = m_Grid [ m_GridCell[cell] ];				
-				while ( pndx != -1 ) {					
-					pcurr = (Fluid*) (mBuf[0].data + pndx*mBuf[0].stride);					
-					if ( pcurr == p ) {pndx = pcurr->next; continue; }
-			
-					dx = ( p->pos.x - pcurr->pos.x)*d;		// dist in cm
-					dy = ( p->pos.y - pcurr->pos.y)*d;
-					dz = ( p->pos.z - pcurr->pos.z)*d;
-					dsq = (dx*dx + dy*dy + dz*dz);
-					if ( mR2 > dsq ) {
-						r = sqrt ( dsq );
-						c = (mR - r);
-						pterm = -0.5f * c * m_SpikyKern * ( p->pressure + pcurr->pressure) / r;
-						dterm = c * p->density * pcurr->density;
-						vterm =	m_LapKern * visc;
-						force.x += ( pterm * dx + vterm * (pcurr->vel_eval.x - p->vel_eval.x) ) * dterm;
-						force.y += ( pterm * dy + vterm * (pcurr->vel_eval.y - p->vel_eval.y) ) * dterm;
-						force.z += ( pterm * dz + vterm * (pcurr->vel_eval.z - p->vel_eval.z) ) * dterm;
-					}
-					pndx = pcurr->next;
-				}
-			}
-		}
-		p->sph_force = force;
 	}
 }
 

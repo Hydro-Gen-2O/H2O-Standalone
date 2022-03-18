@@ -6,14 +6,12 @@
 	#include <gl/glee.h>
 	#include <gl/glext.h>	
 	#include <gl/glut.h>
-	#include "mtime.h"
+	#include <iostream>
 
 	extern void checkOpenGL ();
 	extern void drawText ( int x, int y, char* msg);
 	extern void drawGrid ();
-	extern void measureFPS ();
 
-	extern mint::Time	tm_last;
 	extern int			tm_cnt;
 	extern float		tm_fps;
 	

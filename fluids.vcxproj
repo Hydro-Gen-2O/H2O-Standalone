@@ -110,7 +110,6 @@
     <ClCompile Include="common\gl_helper.cpp" />
     <ClCompile Include="common\matrix.cpp" />
     <ClCompile Include="common\mdebug.cpp" />
-    <ClCompile Include="common\mtime.cpp" />
     <ClCompile Include="common\point_set.cpp" />
     <ClCompile Include="common\vector.cpp" />
     <ClCompile Include="fluids\fluid.cpp" />
@@ -124,7 +123,6 @@
     <ClInclude Include="common\matrix-inline.h" />
     <ClInclude Include="common\matrix.h" />
     <ClInclude Include="common\mdebug.h" />
-    <ClInclude Include="common\mtime.h" />
     <ClInclude Include="common\point_set.h" />
     <ClInclude Include="common\vector.h" />
     <ClInclude Include="fluids\fluid.h" />

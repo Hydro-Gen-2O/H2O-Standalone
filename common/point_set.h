@@ -41,19 +41,13 @@
 
 	// Scalar params
 	#define PNT_DRAWMODE		0
-		#define PNT_SPHERE			0
-		#define PNT_POINT			1
 	#define PNT_DRAWSIZE		1		
 	#define POINT_GRAV			2
 	#define PLANE_GRAV			3
 
 	// Vector params
 	#define POINT_GRAV_POS		5	
-	#define PLANE_GRAV_DIR		6	
-
-
-	#define BPOINT				0
-	#define BPARTICLE			1
+	#define PLANE_GRAV_DIR		6
 
 	struct Point {
 		Vector3DF		pos;
@@ -66,8 +60,7 @@
 		DWORD			clr;
 		int				next;
 		Vector3DF		vel;			
-		Vector3DF		vel_eval;		
-		unsigned short	age;
+		Vector3DF		vel_eval;
 	};
 
 	class PointSet : public GeomX {
@@ -75,26 +68,14 @@
 		PointSet ();
 
 		// Point Sets
-		
-		virtual void Initialize ( int mode, int max );
 		virtual void Draw ( float* view_mat, float rad );		
 		virtual void Reset ();		
 		virtual int AddPoint ();		
 		virtual int AddPointReuse ();
 		Point* GetPoint ( int n )		{ return (Point*) GetElem(0, n); }		
-		int	NumPoints ()				{ return NumElem(0); }		
-
-		// Metablobs
-		virtual float GetValue ( float x, float y, float z );
-		virtual Vector3DF GetGradient ( float x, float y, float z );
-	//	virtual float GetValue ( float x, float y, float z, Vector3DF& dir );
-		virtual DWORD GetColor ( float x, float y, float z );
+		int	NumPoints ()				{ return NumElem(0); }
 		
-		// Particle system		
-		virtual void Run ();
-		virtual void Advance ();	
-
-		// Misc
+		// Particle system
 		virtual void AddVolume ( Vector3DF min, Vector3DF max, float spacing );
 
 		// Parameters			
@@ -105,28 +86,14 @@
 		void SetVec ( int p, Vector3DF v )	{ m_Vec[p] = v; }
 		void Toggle ( int p )				{ m_Toggle[p] = !m_Toggle[p]; }		
 		bool GetToggle ( int p )			{ return m_Toggle[p]; }
-
 		float GetDT()						{ return (float) m_DT; }
 
 		// Spatial Subdivision
 		void Grid_Setup ( Vector3DF min, Vector3DF max, float sim_scale, float cell_size, float border );		
-		void Grid_Create ();
 		void Grid_InsertParticles ();	
-		void Grid_Draw ( float* view_mat );		
 		void Grid_FindCells ( Vector3DF p, float radius );
-		int Grid_FindCell ( Vector3DF p );
-		Vector3DF GetGridRes ()		{ return m_GridRes; }
-		Vector3DF GetGridMin ()		{ return m_GridMin; }
-		Vector3DF GetGridMax ()		{ return m_GridMax; }
-		Vector3DF GetGridDelta ()	{ return m_GridDelta; }
-		int GetGridCell ( int x, int y, int z );
-		Point* firstGridParticle ( int gc, int& p );
-		Point* nextGridParticle ( int& p );
-		unsigned short* getNeighborTable ( int n, int& cnt );
 
 	protected:
-		int							m_Frame;		
-
 		// Parameters
 		double						m_Param [ MAX_PARAM ];			// see defines above
 		Vector3DF					m_Vec [ MAX_PARAM ];

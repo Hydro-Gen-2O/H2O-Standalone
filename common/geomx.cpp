@@ -20,7 +20,6 @@
   3. This notice may not be removed or altered from any source distribution.
 */
 
-
 #include <vector.h>
 #include "geomx.h"
 #include "mdebug.h"
@@ -91,7 +90,6 @@ int GeomX::CopyBuffer ( uchar bdest, uchar bsrc, GeomX& src )
 	return bdest;
 }
 
-
 void GeomX::CopyBuffers ( GeomX& src )
 {
 	FreeBuffers ();
@@ -137,7 +135,6 @@ void GeomX::CopyAttributes ( GeomX& src )
 		mAttribute[a].offset = attr->offset;
 	}
 }
-		
 
 void GeomX::AddHeap ( int max )
 {
@@ -261,183 +258,4 @@ int GeomX::AddElem ( uchar b, char* data )
 	mBuf[b].num++;
 	mBuf[b].size += mBuf[b].stride; 
 	return mBuf[b].num-1;
-}
-
-bool GeomX::DelElem ( uchar b, int n )
-{
-	if ( n >= 0 && n < mBuf[b].num ) {
-		memcpy ( mBuf[b].data + n*mBuf[b].stride, mBuf[b].data + (mBuf[b].num-1)*mBuf[b].stride, mBuf[b].stride );
-		mBuf[b].num--;
-		mBuf[b].size -= mBuf[b].stride; 
-		return true;
-	}
-	return false;
-}
-
-hpos GeomX::HeapExpand ( ushort size, ushort& ret  )
-{
-	mHeapMax *= 2;	
-	if ( mHeapMax > HEAP_MAX ) {
-		error.PrintF ( "geom", "Geom heap size exceeds range of index.\n" );
-		error.Exit ();
-	}
-	hval* pNewHeap = (hval*) malloc ( mHeapMax * sizeof(hval) );
-	if ( pNewHeap == 0x0 ) {
-		error.PrintF ( "geom", "Geom heap out of memory.\n" );
-		error.Exit ();
-	}
-	memcpy ( pNewHeap, mHeap, mHeapNum*sizeof(hval) );
-	free ( mHeap );
-	mHeap = pNewHeap;
-	ret = size;
-	assert ( mHeapNum >= 0 && mHeapNum < mHeapMax );
-	return mHeapNum;
-}
-
-#define LIST_INIT		4
-
-hpos GeomX::HeapAlloc ( ushort size, ushort& ret  )
-{
-	hval* pPrev = 0x0;
-	hval* pCurr = mHeap + mHeapFree;
-	hpos pos = -1;
-
-	if ( mHeapNum + size < mHeapMax ) {
-		// Heap not yet full.
-		pos = mHeapNum;
-		ret = size;
-		mHeapNum += size;		
-	} else {
-		// Heap full, search free space
-		if ( mHeapFree == -1 ) {
-			pos = HeapExpand ( size, ret );			
-			mHeapNum += ret;
-		} else {			
-			while ( *pCurr < size && pCurr != mHeap-1 ) {
-				pPrev = pCurr;
-				pCurr = mHeap + * (hpos*) (pCurr + FPOS);
-			}
-			if ( pCurr != mHeap-1 ) {
-				// Found free space.
-				if ( pPrev == 0x0 ) {
-					mHeapFree = * (hpos*) (pCurr + FPOS);					
-					assert ( mHeapFree >= -1 );
-				} else {
-					* (hpos*) (pPrev+FPOS) = * (hpos*) (pCurr+FPOS);
-				}
-				pos = pCurr-mHeap;
-				ret = *pCurr;
-			} else {
-				// Heap full, no free space. Expand heap.
-				pos = HeapExpand ( size, ret );
-				mHeapNum += ret;
-			}				
-		}		
-	}	
-
-	assert ( pos >= 0 && pos <= mHeapNum );
-	memset ( mHeap+pos, 0, size*sizeof(hval) );
-	return pos;
-}
-
-void GeomX::HeapAddFree ( hpos pos, int size )
-{
-	// memset ( mHeap+pos, 0xFF, size*sizeof(hval) );
-
-	if ( pos < mHeapFree || mHeapFree == -1 ) {
-		// Lowest position. Insert at head of heap.
-		* (hpos*) (mHeap+pos) = size;	
-		* (hpos*) (mHeap+pos + FPOS) = mHeapFree;
-		mHeapFree = pos;		
-		if ( mHeapFree != -1 && *(hpos*) (mHeap+mHeapFree+FPOS) == 0x0 ) { error.PrintF ( "geomx", "ERROR: Heap pointer 0. pHeapFree, %d\n", pos ); error.Exit (); }
-
-		assert ( mHeapFree >= -1 );
-	} else {
-		hval* pCurr = mHeap + pos;
-		hval* pPrev = 0x0;
-		hval* pNext = mHeap + mHeapFree;
-		
-		if ( pCurr == pNext ) {		// Freeing the first block
-			mHeapFree = * (hpos*) (pCurr + FPOS);			
-			* (hpos*) (mHeap+mHeapFree + FPOS) = 0xFFFFFFFF;			
-			* (hpos*) (pCurr + FPOS) = 0xFFFFFFFF;	
-			* (hpos*) pCurr = 0xFFFFFFFF;					
-			return;		
-
-		}
-		
-		// Find first block greater than new free pos.
-		while ( pNext < pCurr && pNext != mHeap-1 ) {
-			pPrev = pNext;
-			pNext = mHeap + * (hpos*) (pNext + FPOS);			
-		}
-
-		int x = 0;
-		if ( pPrev + *(pPrev) == pCurr ) {							// Prev block touches current one (expand previous)
-			* (hpos*) pPrev += size;								// - prev.size = prev.size + curr.size
-			x=1;
-		
-		} else if ( pCurr + size == pNext && pNext != mHeap-1 )	{	// Curr block touches next one (expand current block)
-			* (hpos*) (pPrev + FPOS) = pos;							// - prev.next = curr
-			* (hpos*) (pCurr + FPOS) = * (hpos*) (pNext + FPOS);	// - curr.next = next.next
-			* (hpos*) pCurr = size + * (hpos*) pNext;				// - curr.size = size + next.size
-			* (hpos*) (pNext) = 0xFFFFFFFF;							// - curr = null
-			* (hpos*) (pNext + FPOS) = 0xFFFFFFFF;					// - curr.next = null
-			x=2;
-
-		} else {													// Otherwise (linked list insert)
-			* (hpos*) (pPrev + FPOS) = pos;							// - prev.next = curr
-			if ( pNext != mHeap-1 )
-				* (hpos*) (pCurr + FPOS) = pNext - mHeap;			// - curr.next = next				
-			else
-				* (hpos*) (pCurr + FPOS) = 0xFFFFFFFF;				// - curr.next = null (no next node)
-			* (hpos*) pCurr = size;									// - curr.size = size
-			x=3;
-		}
-		if ( pCurr !=mHeap-1 && *(hpos*) (pCurr+FPOS) == 0x0 ) { error.PrintF ( "geomx", "ERROR: Heap pointer 0. pCurr, %d, %d\n", x, pos ); error.Exit (); }
-		if ( pPrev !=mHeap-1 && *(hpos*) (pPrev+FPOS) == 0x0 ) { error.PrintF ( "geomx", "ERROR: Heap pointer 0. pPrev, %d, %d\n", x, pos ); error.Exit (); }
-		if ( pNext !=mHeap-1 && *(hpos*) (pNext+FPOS) == 0x0 ) { error.PrintF ( "geomx", "ERROR: Heap pointer 0. pNext, %d, %d\n", x, pos ); error.Exit (); }
-		if ( *(hpos*) (mHeap+mHeapFree+FPOS) == 0x0 ) { error.PrintF ( "geomx", "ERROR: Heap pointer 0. pHeapFree, %d, %d\n", x, pos ); error.Exit (); }
-
-		// -- check for bugs (remove eventually)
-		pNext = mHeap + mHeapFree;
-		while ( pNext != mHeap-1 ) {
-			pPrev = pNext;	
-			pNext = mHeap + * (hpos*) (pNext + FPOS);
-			if ( pNext < pPrev && pNext != mHeap-1 ) {
-				error.PrintF ( "geomx", "ERROR: Heap free space out of order. %d, %d\n", x, pos );
-				error.Exit ();
-			}
-		}
-		//---
-	}
- }
-
-void GeomX::ClearRefs ( hList& list )
-{
-	list.cnt = 0;
-	list.max = 0;
-	list.pos = 0;
-}
-
-hval GeomX::AddRef ( hval r, hList& list, hval delta )
-{	
-	if ( list.max == 0 ) {
-		list.cnt = 1;		
-		list.pos = HeapAlloc ( LIST_INIT, list.max );
-		*(mHeap + list.pos) = r+delta;
-	} else {
-		if ( list.cnt >= list.max ) {			
-			int siz = list.max;
-			hpos new_pos = HeapAlloc ( siz+LIST_INIT, list.max );				// Alloc new location
-			//printf ( "MOVE %d -> %d\n", list.pos, new_pos );			
-			memcpy ( mHeap+new_pos, mHeap+list.pos, list.cnt*sizeof(hval) );	// Copy data to new location
-			HeapAddFree ( list.pos, siz );										// Free old location						
-			list.pos = new_pos;	
-			
-		}
-		*(mHeap + list.pos + list.cnt) = r+delta;
-		list.cnt++;
-	}
-	return list.pos;
 }
