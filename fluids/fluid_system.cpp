@@ -459,6 +459,38 @@ void FluidSystem::SPH_ComputePressureGrid ()
 			m_GridCell[cell] = -1;
 		}
 		p->density = sum * m_Param[SPH_PMASS] * m_Poly6Kern ;	
+
+
+		//add lambda function here -- Runshi
+		//float C = p->density / m_Param[SPH_RESTDENSITY] - 1; //density constraint
+
+		// //Calculate gradient and norm square of that mutiplied by C, and add them to the denominator.
+		// //this part of of the code should be combined into the code above.
+		// 
+		// float Denominator = 0;
+		// 
+		//for (int cell = 0; cell < 8; cell++) {
+		//	if (m_GridCell[cell] != -1) {
+		//		pndx = m_Grid[m_GridCell[cell]];
+		//		while (pndx != -1) {
+		//			pcurr = (Fluid*)(mBuf[0].data + pndx * mBuf[0].stride);
+		//			if (pcurr == p) { pndx = pcurr->next; continue; }
+		// 
+		//			//get the gradient of the point
+		//			float gradient = 0; //assume we have it
+		//			Denominator += normSqaure(gradient * C);
+		//			pndx = pcurr->next;
+		//		}
+		//	}
+		//	m_GridCell[cell] = -1;
+		//}
+		//
+		//float lambda = - C/Denominator; //store it in a array coresponding to its point;
+		// 
+		////end of my own implementation
+
+
+
 		p->pressure = ( p->density - m_Param[SPH_RESTDENSITY] ) * m_Param[SPH_INTSTIFF];		
 		p->density = 1.0f / p->density;		
 	}
