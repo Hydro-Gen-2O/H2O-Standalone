@@ -39,6 +39,9 @@
 		float			pressure;		// Smoothed Particle Hydrodynamics
 		float			density;	
 		Vector3DF		sph_force;
+
+		Vector3DF gradient;
+		float lambda;
 	};
 
 #endif /*PARTICLE_H_*/

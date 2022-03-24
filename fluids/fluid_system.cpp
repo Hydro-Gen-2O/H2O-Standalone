@@ -433,8 +433,11 @@ void FluidSystem::SPH_ComputePressureGrid ()
 		sum = 0.0;	
 		m_NC[i] = 0;
 
+		Vector3DF pGradient;
+
 		Grid_FindCells ( p->pos, radius );
 		for (int cell=0; cell < 8; cell++) {
+			
 			if ( m_GridCell[cell] != -1 ) {
 				pndx = m_Grid [ m_GridCell[cell] ];				
 				while ( pndx != -1 ) {					
@@ -447,52 +450,106 @@ void FluidSystem::SPH_ComputePressureGrid ()
 					if ( mR2 > dsq ) {
 						c =  m_R2 - dsq;
 						sum += c * c * c;
+
+						//gradient calculation
+						float magnitudeR = sqrt(dsq);
+						Vector3DF r(dx, dy, dz);
+						r *= -m_SpikyKern * (mR - magnitudeR) * (mR - magnitudeR) / magnitudeR;
+						pGradient += r;
+
 						if ( m_NC[i] < MAX_NEIGHBOR ) {
 							m_Neighbor[i][ m_NC[i] ] = pndx;
-							m_NDist[i][ m_NC[i] ] = sqrt(dsq);
+							m_NDist[i][ m_NC[i] ] = magnitudeR;
 							m_NC[i]++;
 						}
 					}
 					pndx = pcurr->next;
 				}
 			}
-			m_GridCell[cell] = -1;
+			//m_GridCell[cell] = -1;
 		}
 		p->density = sum * m_Param[SPH_PMASS] * m_Poly6Kern ;	
 
-
-		//add lambda function here -- Runshi
-		//float C = p->density / m_Param[SPH_RESTDENSITY] - 1; //density constraint
-
-		// //Calculate gradient and norm square of that mutiplied by C, and add them to the denominator.
-		// //this part of of the code should be combined into the code above.
-		// 
-		// float Denominator = 0;
-		// 
-		//for (int cell = 0; cell < 8; cell++) {
-		//	if (m_GridCell[cell] != -1) {
-		//		pndx = m_Grid[m_GridCell[cell]];
-		//		while (pndx != -1) {
-		//			pcurr = (Fluid*)(mBuf[0].data + pndx * mBuf[0].stride);
-		//			if (pcurr == p) { pndx = pcurr->next; continue; }
-		// 
-		//			//get the gradient of the point
-		//			float gradient = 0; //assume we have it
-		//			Denominator += normSqaure(gradient * C);
-		//			pndx = pcurr->next;
-		//		}
-		//	}
-		//	m_GridCell[cell] = -1;
-		//}
-		//
-		//float lambda = - C/Denominator; //store it in a array coresponding to its point;
-		// 
-		////end of my own implementation
-
-
+		pGradient /= m_Param[SPH_RESTDENSITY];
+		p->gradient = pGradient;
 
 		p->pressure = ( p->density - m_Param[SPH_RESTDENSITY] ) * m_Param[SPH_INTSTIFF];		
-		p->density = 1.0f / p->density;		
+		//p->density = 1.0f / p->density;		//moved to loop below
+	}
+
+
+	//lambda function
+	for (dat1 = mBuf[0].data; dat1 < dat1_end; dat1 += mBuf[0].stride, i++) {
+		p = (Fluid*)dat1;
+
+		float C = p->density / m_Param[SPH_RESTDENSITY] - 1;
+
+		float denominator = 0.f;
+		for (int cell = 0; cell < 8; cell++) {
+			if (m_GridCell[cell] != -1) {
+				pndx = m_Grid[m_GridCell[cell]];
+				while (pndx != -1) {
+					pcurr = (Fluid*)(mBuf[0].data + pndx * mBuf[0].stride);
+					if (pcurr == p)
+					{
+						//the case the k = i
+						pndx = pcurr->next;
+						continue;
+					}
+
+					denominator += pcurr->gradient.Dot(pcurr->gradient);
+					pndx = pcurr->next;
+				}
+			}
+			m_GridCell[cell] = -1;
+		}
+
+		p->lambda = -C / denominator;
+
+		//p->density = 1.0f / p->density;
+	}
+
+
+	// position update part, should be a separate function, put it here for now
+	for (dat1 = mBuf[0].data; dat1 < dat1_end; dat1 += mBuf[0].stride, i++) {
+		p = (Fluid*)dat1;
+
+
+		Vector3DF deltaP(0.f,0.f,0.f);
+
+		for (int cell = 0; cell < 8; cell++) {
+			if (m_GridCell[cell] != -1) {
+				pndx = m_Grid[m_GridCell[cell]];
+				while (pndx != -1) {
+					pcurr = (Fluid*)(mBuf[0].data + pndx * mBuf[0].stride);
+					if (pcurr == p)
+					{
+						//the case the k = i
+						pndx = pcurr->next;
+						continue;
+					}
+					dx = (p->pos.x - pcurr->pos.x) * d;		// dist in cm
+					dy = (p->pos.y - pcurr->pos.y) * d;
+					dz = (p->pos.z - pcurr->pos.z) * d;
+					dsq = (dx * dx + dy * dy + dz * dz);
+					if (mR2 > dsq) {
+						//gradient calculation
+						float magnitudeR = sqrt(dsq);
+						Vector3DF r(dx, dy, dz);
+						r *= -m_SpikyKern * (mR - magnitudeR) * (mR - magnitudeR) / magnitudeR;
+						r *= p->lambda + pcurr->lambda;
+						deltaP += r;
+					}
+					pndx = pcurr->next;
+				}
+			}
+			//m_GridCell[cell] = -1;
+		}
+
+		deltaP /= m_Param[SPH_RESTDENSITY];
+		p->deltaPos = deltaP;
+
+		//p->density = 1.0f / p->density;
 	}
 }
 
