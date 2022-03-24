@@ -42,6 +42,7 @@
 
 		Vector3DF gradient;
 		float lambda;
+		Vector3DF deltaPos;
 	};
 
 #endif /*PARTICLE_H_*/
