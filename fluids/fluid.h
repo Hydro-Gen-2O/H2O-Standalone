@@ -44,6 +44,7 @@
 		float lambda;
 		Vector3DF deltaPos;
 		Vector3DF vorticity;
+		Vector3DF vel_after_visc;
 	};
 
 #endif /*PARTICLE_H_*/

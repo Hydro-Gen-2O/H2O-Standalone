@@ -541,9 +541,21 @@ void FluidSystem::SPH_ComputeVorticityAndViscosity()
 	for (dat1 = mBuf[0].data; dat1 < dat1_end; dat1 += mBuf[0].stride, i++) {
 		p = (Fluid*)dat1;
 
-		Grid_FindCells(p->pos, radius);
+		Vector3DF modification(0.f,0.f,0.f);
 
+		// only viscosity 
+		for (int j = 0; j < m_NC[i]; j++) {
+			pcurr = (Fluid*)(mBuf[0].data + m_Neighbor[i][j] * mBuf[0].stride);
+			Vector3DF vij = pcurr->vel;
+			vij -= p->vel;
+			c = mR2 - m_Neighbor[i][j] * m_Neighbor[i][j]; // (h^2 - r^2)
+			vij *= c * c * c * m_Poly6Kern;
+			modification += vij;
+		}
 
+		modification *= 0.01; // parameter c = 0.01
 
+		p->vel_after_visc = p->vel;
+		p->vel_after_visc += modification;
 	}
 }
