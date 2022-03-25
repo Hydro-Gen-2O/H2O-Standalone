@@ -43,15 +43,6 @@
 		ushort		max;
 		hpos		pos;
 	};
-	
-	class GeomAttr {
-	public:
-		GeomAttr()	{ name = ""; buf = 0; stride = 0; offset = 0; }
-		std::string	name;
-		ushort		buf;
-		ushort		stride;
-		ushort		offset;
-	};
 
 	class GeomBuf {
 	public:
@@ -67,49 +58,18 @@
 	class GeomX {
 	public:
 		GeomX ();
-	
-	//	virtual objType GetType ()			{ return 'geom'; }
-	
 		// Basic geometry setup	
-		void FreeBuffers ();		
-		void ClearAttributes ();
-		void AddHeap ( int max );
-		int CopyBuffer ( uchar bdest, uchar bsrc, GeomX& src );
-		void CopyBuffers ( GeomX& src );
-		void CopyAttributes ( GeomX& src );
-		void CopyHeap ( GeomX& src );
+		void FreeBuffers ();
 		void ResetBuffer ( uchar b, int n );
-		void ResetHeap ();
 		int AddBuffer ( uchar typ, ushort stride, int max );
-		int AddAttribute ( uchar b, std::string name, ushort stride );
-		int AddAttribute ( uchar b, std::string name, ushort stride, bool bExtend );
-		int GetAttribute ( std::string name );
-		int GetAttrOffset ( std::string name );
-		int NumElem ( uchar b )				{ if ( b==BUF_UNDEF) return 0; else return mBuf[b].num; }
-		int MaxElem ( uchar b )				{ if ( b==BUF_UNDEF) return 0; else return mBuf[b].max; } 		
-		int GetStride ( uchar b )			{ return mBuf[b].stride; }
+		
+		int NumElem ( uchar b )				{ if ( b==BUF_UNDEF) return 0; else return mBuf[b].num; }		
 		char* GetElem ( uchar b, int n )	{ return mBuf[b].data + n*mBuf[b].stride; }
-		char* RandomElem ( uchar b, href& ndx );
-		char* AddElem ( uchar b, href& pos );
-		int AddElem ( uchar b, char* data );		
-		char* GetStart ( uchar b )			{ return mBuf[b].data; }
-		char* GetEnd ( uchar b )			{ return mBuf[b].data + mBuf[b].num*mBuf[b].stride; }
-		GeomBuf* GetBuffer ( uchar b )		{ return &mBuf[b]; }
-		GeomAttr* GetAttribute ( int n )		{ return &mAttribute[n]; }
-		int GetNumBuf ()					{ return (int) mBuf.size(); }
-		int GetNumAttr ()					{ return (int) mAttribute.size(); }
-		hval* GetHeap ( hpos& num, hpos& max, hpos& free );
-
-		int GetSize ();
+		char* RandomElem(uchar b, href& ndx);
+		char* AddElem(uchar b, href& pos);
 		
 	protected:
-		std::vector< GeomBuf >		mBuf;	
-		std::vector< GeomAttr >		mAttribute;
-
-		hpos						mHeapNum;
-		hpos						mHeapMax;
-		hpos						mHeapFree;
-		hval*						mHeap;
+		std::vector< GeomBuf > mBuf;
 	};
 
 #endif

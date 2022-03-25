@@ -31,7 +31,7 @@
 	
 	#include "common_defs.h"
 	#include "geomx.h"
-	#include "vector.h"	
+	#include "vector.h"
 
 	typedef signed int		xref;
 	

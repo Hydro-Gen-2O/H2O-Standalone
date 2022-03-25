@@ -56,9 +56,6 @@
 	#define SPH_VOLMAX			8
 	#define SPH_INITMIN			9
 	#define SPH_INITMAX			10
-
-	// Toggles
-	#define WRAP_X				2
 	
 	#define MAX_PARAM			21
 	#define BFLUID				2
@@ -74,8 +71,6 @@
 		virtual void Advance ();
 		virtual int AddPoint ();		
 		virtual int AddPointReuse ();
-		Fluid* AddFluid ()			{ return (Fluid*) GetElem(0, AddPointReuse()); }
-		Fluid* GetFluid (int n)		{ return (Fluid*) GetElem(0, n); }
 		
 		// Smoothed Particle Hydrodynamics
 		void SPH_Setup ();
@@ -83,11 +78,10 @@
 		void SPH_DrawDomain ();
 		void SPH_ComputeKernels ();
 
-		void SPH_ComputePressureSlow ();			// O(n^2)
 		void SPH_ComputePressureGrid ();			// O(kn) - spatial grid
 		
-		void SPH_ComputeForceGridNC ();				// O(cn) - neighbor table		
-		
+		void SPH_ComputeForceGridNC ();				// O(cn) - neighbor table
+
 	private:
 		// Smoothed Particle Hydrodynamics
 		double m_R2, m_Poly6Kern, m_LapKern, m_SpikyKern; // Kernel functions

@@ -28,6 +28,8 @@
 
 #define EPSILON			0.00001f			//for collision detection
 
+std::vector<std::unique_ptr<Fluid>> fluidPs;
+
 FluidSystem::FluidSystem ()
 {
 }
@@ -52,15 +54,10 @@ void FluidSystem::SPH_DrawDomain()
 void FluidSystem::Initialize ( int total )
 {
 	FreeBuffers ();
-	AddBuffer ( BFLUID, sizeof ( Fluid ), total );
-	AddAttribute ( 0, "pos", sizeof ( Vector3DF ), false );	
-	AddAttribute ( 0, "color", sizeof ( DWORD ), false );
-	AddAttribute ( 0, "vel", sizeof ( Vector3DF ), false );
-	AddAttribute ( 0, "ndx", sizeof ( unsigned short ), false );
-
-	AddAttribute ( 0, "pressure", sizeof ( double ), false );
-	AddAttribute ( 0, "density", sizeof ( double ), false );
-	AddAttribute ( 0, "sph_force", sizeof ( Vector3DF ), false );
+	AddBuffer(BFLUID, sizeof(Fluid), total);
+	//for (int i = 0; i < total; ++i) {
+	//	fluidPs.push_back(std::make_unique<Fluid>());
+	//}
 		
 	SPH_Setup ();
 	Reset ( total );	
@@ -80,7 +77,6 @@ void FluidSystem::Reset ( int nmax )
 	m_Param [ BOUND_ZMIN_SLOPE ] = 0.0;
 	m_Param [ FORCE_XMAX_SIN ] = 0.0;
 	m_Param [ FORCE_XMIN_SIN ] = 0.0;	
-	m_Toggle [ WRAP_X ] = false;
 	m_Param [ SPH_INTSTIFF ] = 1.00;
 	m_Param [ SPH_VISC ] = 0.2;
 	m_Param [ SPH_INTSTIFF ] = 0.50;
@@ -168,11 +164,11 @@ void FluidSystem::Advance ()
 		// Boundary Conditions
 		// Z-axis walls (floor)
 		diff = 2 * radius - ( p->pos.z - min.z - (p->pos.x - m_Vec[SPH_VOLMIN].x) * m_Param[BOUND_ZMIN_SLOPE] )*ss;
-		if (diff > EPSILON ) {			
-			norm.Set ( -m_Param[BOUND_ZMIN_SLOPE], 0, 1.0 - m_Param[BOUND_ZMIN_SLOPE] );
-			adj = stiff * diff - damp * norm.Dot ( p->vel_eval );
+		if (diff > EPSILON) {
+			norm.Set(-m_Param[BOUND_ZMIN_SLOPE], 0, 1.0 - m_Param[BOUND_ZMIN_SLOPE]);
+			adj = stiff * diff - damp * norm.Dot(p->vel_eval);
 			accel.x += adj * norm.x; accel.y += adj * norm.y; accel.z += adj * norm.z;
-		}		
+		}
 
 		diff = 2 * radius - ( max.z - p->pos.z )*ss;
 		if (diff > EPSILON) {
@@ -182,21 +178,19 @@ void FluidSystem::Advance ()
 		}
 		
 		// X-axis walls
-		if ( !m_Toggle[WRAP_X] ) {
-			diff = 2 * radius - ( p->pos.x - min.x + (sin(m_Time*10.0)-1+(p->pos.y*0.025)*0.25) * m_Param[FORCE_XMIN_SIN] )*ss;	
-			//diff = 2 * radius - ( p->pos.x - min.x + (sin(m_Time*10.0)-1) * m_Param[FORCE_XMIN_SIN] )*ss;	
-			if (diff > EPSILON ) {
-				norm.Set ( 1.0, 0, 0 );
-				adj = (m_Param[ FORCE_XMIN_SIN ] + 1) * stiff * diff - damp * norm.Dot ( p->vel_eval ) ;
-				accel.x += adj * norm.x; accel.y += adj * norm.y; accel.z += adj * norm.z;					
-			}
+		diff = 2 * radius - ( p->pos.x - min.x + (sin(m_Time*10.0)-1+(p->pos.y*0.025)*0.25) * m_Param[FORCE_XMIN_SIN] )*ss;	
+		//diff = 2 * radius - ( p->pos.x - min.x + (sin(m_Time*10.0)-1) * m_Param[FORCE_XMIN_SIN] )*ss;	
+		if (diff > EPSILON ) {
+			norm.Set ( 1.0, 0, 0 );
+			adj = (m_Param[ FORCE_XMIN_SIN ] + 1) * stiff * diff - damp * norm.Dot ( p->vel_eval ) ;
+			accel.x += adj * norm.x; accel.y += adj * norm.y; accel.z += adj * norm.z;					
+		}
 
-			diff = 2 * radius - ( max.x - p->pos.x + (sin(m_Time*10.0)-1) * m_Param[FORCE_XMAX_SIN] )*ss;	
-			if (diff > EPSILON) {
-				norm.Set ( -1, 0, 0 );
-				adj = (m_Param[ FORCE_XMAX_SIN ]+1) * stiff * diff - damp * norm.Dot ( p->vel_eval );
-				accel.x += adj * norm.x; accel.y += adj * norm.y; accel.z += adj * norm.z;
-			}
+		diff = 2 * radius - ( max.x - p->pos.x + (sin(m_Time*10.0)-1) * m_Param[FORCE_XMAX_SIN] )*ss;	
+		if (diff > EPSILON) {
+			norm.Set ( -1, 0, 0 );
+			adj = (m_Param[ FORCE_XMAX_SIN ]+1) * stiff * diff - damp * norm.Dot ( p->vel_eval );
+			accel.x += adj * norm.x; accel.y += adj * norm.y; accel.z += adj * norm.z;
 		}
 
 		// Y-axis walls
@@ -228,15 +222,15 @@ void FluidSystem::Advance ()
 		}
 
 		// Leapfrog Integration ----------------------------
-		vnext = accel;							
+		vnext = accel;
 		vnext *= m_DT;
-		vnext += p->vel;						// v(t+1/2) = v(t-1/2) + a(t) dt
+		vnext += p->vel;		// v(t+1/2) = v(t-1/2) + a(t) dt
 		p->vel_eval = p->vel;
 		p->vel_eval += vnext;
-		p->vel_eval *= 0.5;					// v(t+1) = [v(t-1/2) + v(t+1/2)] * 0.5		used to compute forces later
+		p->vel_eval *= 0.5;		// v(t+1) = [v(t-1/2) + v(t+1/2)] * 0.5	  used to compute forces later
 		p->vel = vnext;
 		vnext *= m_DT/ss;
-		p->pos += vnext;						// p(t+1) = p(t) + v(t+1/2) dt
+		p->pos += vnext;		// p(t+1) = p(t) + v(t+1/2) dt
 
 		if ( m_Param[CLR_MODE]==1.0 ) {
 			adj = fabs(vnext.x)+fabs(vnext.y)+fabs(vnext.z) / 7000.0;
@@ -257,15 +251,7 @@ void FluidSystem::Advance ()
 		p->vel_eval += accel;
 		p->vel_eval *= m_DT/d;
 		p->pos += p->vel_eval;
-		p->vel_eval = p->vel;  */	
-
-		if ( m_Toggle[WRAP_X] ) {
-			diff = p->pos.x - (m_Vec[SPH_VOLMIN].x + 2);			// -- Simulates object in center of flow
-			if ( diff <= 0 ) {
-				p->pos.x = (m_Vec[SPH_VOLMAX].x - 2) + diff*2;				
-				p->pos.z = 10;
-			}
-		}	
+		p->vel_eval = p->vel;  */
 	}
 	m_Time += m_DT;
 }
@@ -315,19 +301,19 @@ void FluidSystem::SPH_Setup ()
 
 void FluidSystem::SPH_ComputeKernels ()
 {
-	m_Param [ SPH_PDIST ] = pow ( m_Param[SPH_PMASS] / m_Param[SPH_RESTDENSITY], 1/3.0 );
+	m_Param[SPH_PDIST] = pow(m_Param[SPH_PMASS] / m_Param[SPH_RESTDENSITY], 1 / 3.0);
 	m_R2 = m_Param [SPH_SMOOTHRADIUS] * m_Param[SPH_SMOOTHRADIUS];
 	m_Poly6Kern = 315.0f / (64.0f * 3.141592 * pow( m_Param[SPH_SMOOTHRADIUS], 9) );	// Wpoly6 kernel (denominator part) - 2003 Muller, p.4
-	m_SpikyKern = -45.0f / (3.141592 * pow( m_Param[SPH_SMOOTHRADIUS], 6) );			// Laplacian of viscocity (denominator): PI h^6
+	m_SpikyKern = -45.0f / (3.141592 * pow( m_Param[SPH_SMOOTHRADIUS], 6) );			// grad of spiky (no minus)
 	m_LapKern = 45.0f / (3.141592 * pow( m_Param[SPH_SMOOTHRADIUS], 6) );
-} // spiky grad, viscosity lap : -45, 45
+}
 
 void FluidSystem::SPH_CreateExample ( int n, int nmax )
 {
 	Vector3DF pos;
 	Vector3DF min, max;
 	
-	Reset ( nmax );
+	Reset(nmax);
 	
 	switch ( n ) {
 	case -1:		// fluid drop
@@ -346,15 +332,12 @@ void FluidSystem::SPH_CreateExample ( int n, int nmax )
 		m_Param [ FORCE_XMIN_SIN ] = 12.0;
 		m_Param [ BOUND_ZMIN_SLOPE ] = 0.05;
 		break;
-	}	
-
-	SPH_ComputeKernels();
-
+	}
 	m_Param [ SPH_SIMSIZE ] = m_Param [ SPH_SIMSCALE ] * (m_Vec[SPH_VOLMAX].z - m_Vec[SPH_VOLMIN].z);
 	m_Param [ SPH_PDIST ] = pow ( m_Param[SPH_PMASS] / m_Param[SPH_RESTDENSITY], 1/3.0 );	
 
 	float ss = m_Param [ SPH_PDIST ]*0.87 / m_Param[ SPH_SIMSCALE ];	
-	printf ( "Spacing: %f\n", ss);
+	//printf ( "Spacing: %f\n", ss);
 	AddVolume ( m_Vec[SPH_INITMIN], m_Vec[SPH_INITMAX], ss );	// Create the particles
 
 	float cell_size = m_Param[SPH_SMOOTHRADIUS]*2.0;			// Grid cell size (2r)	
@@ -366,48 +349,6 @@ void FluidSystem::SPH_CreateExample ( int n, int nmax )
 	vmin -= Vector3DF(2,2,2);
 	vmax =  m_Vec[SPH_VOLMAX];
 	vmax += Vector3DF(2,2,-2);
-}
-
-// Compute Pressures - Very slow yet simple. O(n^2)
-void FluidSystem::SPH_ComputePressureSlow ()
-{
-	char *dat1, *dat1_end;
-	char *dat2, *dat2_end;
-	Fluid *p, *q;
-	int cnt = 0;
-	double dx, dy, dz, sum, dsq, c;
-	double d, mR, mR2;
-	d = m_Param[SPH_SIMSCALE];
-	mR = m_Param[SPH_SMOOTHRADIUS];
-	mR2 = mR*mR;	
-
-	dat1_end = mBuf[0].data + NumPoints()*mBuf[0].stride;
-	for ( dat1 = mBuf[0].data; dat1 < dat1_end; dat1 += mBuf[0].stride ) {
-		p = (Fluid*) dat1;
-
-		sum = 0.0;
-		cnt = 0;
-		
-		dat2_end = mBuf[0].data + NumPoints()*mBuf[0].stride;
-		for ( dat2 = mBuf[0].data; dat2 < dat2_end; dat2 += mBuf[0].stride ) {
-			q = (Fluid*) dat2;
-
-			if ( p==q ) continue;
-			dx = ( p->pos.x - q->pos.x)*d;		// dist in cm
-			dy = ( p->pos.y - q->pos.y)*d;
-			dz = ( p->pos.z - q->pos.z)*d;
-			dsq = (dx*dx + dy*dy + dz*dz);
-			if ( mR2 > dsq ) {
-				c =  m_R2 - dsq;
-				sum += c * c * c;
-				cnt++;
-				//if ( p == m_CurrP ) q->tag = true;
-			}
-		}	
-		p->density = sum * m_Param[SPH_PMASS] * m_Poly6Kern ;	
-		p->pressure = ( p->density - m_Param[SPH_RESTDENSITY] ) * m_Param[SPH_INTSTIFF];
-		p->density = 1.0f / p->density;
-	}
 }
 
 // Compute Pressures - Using spatial grid, and also create neighbor table
@@ -433,12 +374,12 @@ void FluidSystem::SPH_ComputePressureGrid ()
 		sum = 0.0;	
 		m_NC[i] = 0;
 
-		Grid_FindCells ( p->pos, radius );
+		Grid_FindCells(p->pos, radius);
 		for (int cell=0; cell < 8; cell++) {
 			if ( m_GridCell[cell] != -1 ) {
-				pndx = m_Grid [ m_GridCell[cell] ];				
+				pndx = m_Grid[m_GridCell[cell]];
 				while ( pndx != -1 ) {					
-					pcurr = (Fluid*) (mBuf[0].data + pndx*mBuf[0].stride);					
+					pcurr = (Fluid*) (mBuf[0].data + pndx*mBuf[0].stride);			
 					if ( pcurr == p ) {pndx = pcurr->next; continue; }
 					dx = ( p->pos.x - pcurr->pos.x)*d;		// dist in cm
 					dy = ( p->pos.y - pcurr->pos.y)*d;
@@ -448,8 +389,8 @@ void FluidSystem::SPH_ComputePressureGrid ()
 						c =  m_R2 - dsq;
 						sum += c * c * c;
 						if ( m_NC[i] < MAX_NEIGHBOR ) {
-							m_Neighbor[i][ m_NC[i] ] = pndx;
-							m_NDist[i][ m_NC[i] ] = sqrt(dsq);
+							m_Neighbor[i][m_NC[i]] = pndx;
+							m_NDist[i][m_NC[i]] = sqrt(dsq);
 							m_NC[i]++;
 						}
 					}
@@ -458,9 +399,10 @@ void FluidSystem::SPH_ComputePressureGrid ()
 			}
 			m_GridCell[cell] = -1;
 		}
-		p->density = sum * m_Param[SPH_PMASS] * m_Poly6Kern ;	
-		p->pressure = ( p->density - m_Param[SPH_RESTDENSITY] ) * m_Param[SPH_INTSTIFF];		
-		p->density = 1.0f / p->density;		
+		p->density = sum * m_Param[SPH_PMASS] * m_Poly6Kern;
+		//densities[p_ndx] = p->density;
+		p->pressure = (p->density - m_Param[SPH_RESTDENSITY]) * m_Param[SPH_INTSTIFF];
+		p->density = 1.0f / p->density;
 	}
 }
 
@@ -491,9 +433,9 @@ void FluidSystem::SPH_ComputeForceGridNC ()
 		force.Set ( 0, 0, 0 );
 		for (int j=0; j < m_NC[i]; j++ ) {
 			pcurr = (Fluid*) (mBuf[0].data + m_Neighbor[i][j]*mBuf[0].stride);
-			dx = ( p->pos.x - pcurr->pos.x)*d;		// dist in cm
-			dy = ( p->pos.y - pcurr->pos.y)*d;
-			dz = ( p->pos.z - pcurr->pos.z)*d;				
+			dx = (p->pos.x - pcurr->pos.x) * d;		// dist in cm
+			dy = (p->pos.y - pcurr->pos.y) * d;
+			dz = (p->pos.z - pcurr->pos.z) * d;
 			c = ( mR - m_NDist[i][j] );
 			pterm = -0.5f * c * m_SpikyKern * ( p->pressure + pcurr->pressure) / m_NDist[i][j];
 			dterm = c * p->density * pcurr->density;
@@ -501,7 +443,7 @@ void FluidSystem::SPH_ComputeForceGridNC ()
 			force.x += ( pterm * dx + vterm * (pcurr->vel_eval.x - p->vel_eval.x) ) * dterm;
 			force.y += ( pterm * dy + vterm * (pcurr->vel_eval.y - p->vel_eval.y) ) * dterm;
 			force.z += ( pterm * dz + vterm * (pcurr->vel_eval.z - p->vel_eval.z) ) * dterm;
-		}			
+		}
 		p->sph_force = force;
 	}
 }
