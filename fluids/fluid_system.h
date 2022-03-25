@@ -82,6 +82,8 @@
 		
 		void SPH_ComputeForceGridNC ();				// O(cn) - neighbor table
 
+		void SPH_ComputeVorticityAndViscosity();
+
 	private:
 		// Smoothed Particle Hydrodynamics
 		double m_R2, m_Poly6Kern, m_LapKern, m_SpikyKern; // Kernel functions
