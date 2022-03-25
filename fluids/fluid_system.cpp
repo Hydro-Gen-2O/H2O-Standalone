@@ -511,6 +511,12 @@ void FluidSystem::SPH_ComputePressureGrid ()
 
 
 	// position update part, should be a separate function, put it here for now
+
+	// the denominator of the surface correction (artificial pressure)
+	// and we choose k = 0.1, deltaq = 0.1h, n = 4
+	float correction = mR2 - (0.1 * mR) * (0.1 * mR);
+	float Scorr_denominator = m_Poly6Kern * correction * correction * correction;
+
 	for (dat1 = mBuf[0].data; dat1 < dat1_end; dat1 += mBuf[0].stride, i++) {
 		p = (Fluid*)dat1;
 
@@ -533,11 +539,18 @@ void FluidSystem::SPH_ComputePressureGrid ()
 					dz = (p->pos.z - pcurr->pos.z) * d;
 					dsq = (dx * dx + dy * dy + dz * dz);
 					if (mR2 > dsq) {
+						// artificial pressure/surface correction calculation
+						c = m_R2 - dsq;
+						float numerator = m_Poly6Kern * c * c * c;
+						float base = numerator / Scorr_denominator;
+						base = base * base * base * base; // n=4
+						float Scorr = -0.1 * base;// k = 0.1
+
 						//gradient calculation
 						float magnitudeR = sqrt(dsq);
 						Vector3DF r(dx, dy, dz);
 						r *= -m_SpikyKern * (mR - magnitudeR) * (mR - magnitudeR) / magnitudeR;
-						r *= p->lambda + pcurr->lambda;
+						r *= p->lambda + pcurr->lambda + Scorr;
 						deltaP += r;
 					}
 					pndx = pcurr->next;
@@ -592,5 +605,31 @@ void FluidSystem::SPH_ComputeForceGridNC ()
 			force.z += ( pterm * dz + vterm * (pcurr->vel_eval.z - p->vel_eval.z) ) * dterm;
 		}			
 		p->sph_force = force;
+	}
+}
+
+void FluidSystem::SPH_ComputreVorticityAndViscosity()
+{
+	char* dat1, * dat1_end;
+	Fluid* p;
+	Fluid* pcurr;
+	int pndx;
+	int i, cnt = 0;
+	float dx, dy, dz, sum, dsq, c;
+	float d, mR, mR2;
+	float radius = m_Param[SPH_SMOOTHRADIUS] / m_Param[SPH_SIMSCALE];
+	d = m_Param[SPH_SIMSCALE];
+	mR = m_Param[SPH_SMOOTHRADIUS];
+	mR2 = mR * mR;
+
+	dat1_end = mBuf[0].data + NumPoints() * mBuf[0].stride;
+	i = 0;
+	for (dat1 = mBuf[0].data; dat1 < dat1_end; dat1 += mBuf[0].stride, i++) {
+		p = (Fluid*)dat1;
+
+		Grid_FindCells(p->pos, radius);
+
+
+
 	}
 }
