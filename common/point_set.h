@@ -70,14 +70,9 @@
 		// Point Sets
 		virtual void Draw ( float* view_mat, float rad );		
 		virtual void Reset ();		
-		virtual int AddPoint ();		
-		virtual int AddPointReuse ();
 		Point* GetPoint ( int n )		{ return (Point*) GetElem(0, n); }		
 		int	NumPoints ()				{ return NumElem(0); }
 		
-		// Particle system
-		virtual void AddVolume ( Vector3DF min, Vector3DF max, float spacing );
-
 		// Parameters			
 		void SetParam (int p, float v )		{ m_Param[p] = v; }
 		void SetParam (int p, int v )		{ m_Param[p] = (float) v; }

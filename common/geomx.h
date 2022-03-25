@@ -65,7 +65,6 @@
 		
 		int NumElem ( uchar b )				{ if ( b==BUF_UNDEF) return 0; else return mBuf[b].num; }		
 		char* GetElem ( uchar b, int n )	{ return mBuf[b].data + n*mBuf[b].stride; }
-		char* RandomElem(uchar b, href& ndx);
 		char* AddElem(uchar b, href& pos);
 		
 	protected:

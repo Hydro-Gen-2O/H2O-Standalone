@@ -47,46 +47,6 @@ void PointSet::Reset ()
 	m_Vec[ PLANE_GRAV_DIR].Set(0,0,-9.8);
 }
 
-int PointSet::AddPoint ()
-{
-	xref ndx;
-	AddElem ( 0, ndx );	
-	return ndx;
-}
-
-int PointSet::AddPointReuse ()
-{
-	xref ndx;	
-	if ( NumPoints() < mBuf[0].max-1 )
-		AddElem ( 0, ndx );
-	else
-		RandomElem ( 0, ndx );
-	return ndx;
-}
-
-void PointSet::AddVolume ( Vector3DF min, Vector3DF max, float spacing )
-{
-	Vector3DF pos;
-	Point* p;	
-	float dx, dy, dz;
-	dx = max.x-min.x;
-	dy = max.y-min.y;
-	dz = max.z-min.z;
-	for (float z = max.z; z >= min.z; z -= spacing ) {
-		for (float y = min.y; y <= max.y; y += spacing ) {	
-			for (float x = min.x; x <= max.x; x += spacing ) {
-				p = GetPoint ( AddPointReuse () );
-				pos.Set ( x, y, z);
-				//pos.x += -0.05 + float( rand() * 0.1 ) / RAND_MAX;
-				//pos.y += -0.05 + float( rand() * 0.1 ) / RAND_MAX;
-				//pos.z += -0.05 + float( rand() * 0.1 ) / RAND_MAX;
-				p->pos = pos;				
-				p->clr = COLORA( (x-min.x)/dx, (y-min.y)/dy, (z-min.z)/dz, 1);
-			}
-		}
-	}	
-}
-
 void PointSet::Draw ( float* view_mat, float rad )
 {
 	char* dat;

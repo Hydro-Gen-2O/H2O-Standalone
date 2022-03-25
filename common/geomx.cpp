@@ -83,9 +83,3 @@ char* GeomX::AddElem ( uchar b, href& ndx )
 	ndx = mBuf[b].num-1;
 	return mBuf[b].data + ndx*mBuf[b].stride;
 }
-
-char* GeomX::RandomElem ( uchar b, href& ndx )
-{
-	ndx = mBuf[b].num * rand() / RAND_MAX;
-	return mBuf[b].data + ndx*mBuf[b].stride;
-}

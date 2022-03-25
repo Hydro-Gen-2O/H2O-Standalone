@@ -68,8 +68,7 @@
 		virtual void Initialize ( int nmax );
 		virtual void Reset ( int nmax );
 		virtual void Run ();
-		virtual void Advance ();
-		virtual int AddPoint ();		
+		virtual void Advance ();	
 		virtual int AddPointReuse ();
 		
 		// Smoothed Particle Hydrodynamics

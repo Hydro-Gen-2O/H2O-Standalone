@@ -29,6 +29,8 @@
 #define EPSILON			0.00001f			//for collision detection
 
 std::vector<std::unique_ptr<Fluid>> fluidPs;
+int numPoints = 0;
+int maxPoints = 0;
 
 FluidSystem::FluidSystem ()
 {
@@ -50,14 +52,11 @@ void FluidSystem::SPH_DrawDomain()
 	glEnd();
 }
 
-
 void FluidSystem::Initialize ( int total )
 {
+	maxPoints = total;
 	FreeBuffers ();
 	AddBuffer(BFLUID, sizeof(Fluid), total);
-	//for (int i = 0; i < total; ++i) {
-	//	fluidPs.push_back(std::make_unique<Fluid>());
-	//}
 		
 	SPH_Setup ();
 	Reset ( total );	
@@ -87,28 +86,18 @@ void FluidSystem::Reset ( int nmax )
 	m_Vec [ PLANE_GRAV_DIR ].Set ( 0, 0, -9.8 );
 }
 
-int FluidSystem::AddPoint ()
-{
-	xref ndx;	
-	Fluid* f = (Fluid*) AddElem ( 0, ndx );	
-	f->sph_force.Set(0,0,0);
-	f->vel.Set(0,0,0);
-	f->vel_eval.Set(0,0,0);
-	f->next = 0x0;
-	f->pressure = 0;
-	f->density = 0;
-	return ndx;
-}
-
 int FluidSystem::AddPointReuse ()
 {
 	xref ndx;	
 	Fluid* f;
-	if ( NumPoints() <= mBuf[0].max-2 )
-		f = (Fluid*) AddElem ( 0, ndx );
-	else
-		f = (Fluid*) RandomElem ( 0, ndx );
-
+	if (numPoints < mBuf[0].max - 2) {
+		numPoints++;
+		f = (Fluid*)AddElem(0, ndx);
+		fluidPs.push_back(std::make_unique<Fluid>(*f));
+	} else {
+		ndx = rand() % fluidPs.size();
+		f = fluidPs.at(ndx).get();
+	}
 	f->sph_force.Set(0,0,0);
 	f->vel.Set(0,0,0);
 	f->vel_eval.Set(0,0,0);
@@ -308,14 +297,11 @@ void FluidSystem::SPH_ComputeKernels ()
 	m_LapKern = 45.0f / (3.141592 * pow( m_Param[SPH_SMOOTHRADIUS], 6) );
 }
 
-void FluidSystem::SPH_CreateExample ( int n, int nmax )
+void FluidSystem::SPH_CreateExample(int n, int nmax)
 {
-	Vector3DF pos;
-	Vector3DF min, max;
-	
 	Reset(nmax);
-	
-	switch ( n ) {
+
+	switch (n) {
 	case -1:		// fluid drop
 		m_Vec[SPH_VOLMIN].Set(-30, -30, 0);
 		m_Vec[SPH_VOLMAX].Set(30, 30, 40);
@@ -329,16 +315,33 @@ void FluidSystem::SPH_CreateExample ( int n, int nmax )
 		m_Vec[SPH_INITMIN].Set(-20, -26, 10);
 		m_Vec[SPH_INITMAX].Set(20, 26, 40);
 
-		m_Param [ FORCE_XMIN_SIN ] = 12.0;
-		m_Param [ BOUND_ZMIN_SLOPE ] = 0.05;
+		m_Param[FORCE_XMIN_SIN] = 12.0;
+		m_Param[BOUND_ZMIN_SLOPE] = 0.05;
 		break;
 	}
-	m_Param [ SPH_SIMSIZE ] = m_Param [ SPH_SIMSCALE ] * (m_Vec[SPH_VOLMAX].z - m_Vec[SPH_VOLMIN].z);
-	m_Param [ SPH_PDIST ] = pow ( m_Param[SPH_PMASS] / m_Param[SPH_RESTDENSITY], 1/3.0 );	
+	m_Param[SPH_SIMSIZE] = m_Param[SPH_SIMSCALE] * (m_Vec[SPH_VOLMAX].z - m_Vec[SPH_VOLMIN].z);
+	m_Param[SPH_PDIST] = pow(m_Param[SPH_PMASS] / m_Param[SPH_RESTDENSITY], 1 / 3.0);
 
-	float ss = m_Param [ SPH_PDIST ]*0.87 / m_Param[ SPH_SIMSCALE ];	
+	float ss = m_Param[SPH_PDIST] * 0.87 / m_Param[SPH_SIMSCALE];
 	//printf ( "Spacing: %f\n", ss);
-	AddVolume ( m_Vec[SPH_INITMIN], m_Vec[SPH_INITMAX], ss );	// Create the particles
+	Vector3DF min = m_Vec[SPH_INITMIN];
+	Vector3DF max = m_Vec[SPH_INITMAX];
+	Vector3DF pos;
+	Point* p;
+	float dx, dy, dz;
+	dx = max.x - min.x;
+	dy = max.y - min.y;
+	dz = max.z - min.z;
+	for (float z = max.z; z >= min.z; z -= ss) {
+		for (float y = min.y; y <= max.y; y += ss) {
+			for (float x = min.x; x <= max.x; x += ss) {
+				p = GetPoint(AddPointReuse());
+				pos.Set(x, y, z);
+				p->pos = pos;
+				p->clr = COLORA((x - min.x) / dx, (y - min.y) / dy, (z - min.z) / dz, 1);
+			}
+		}
+	}
 
 	float cell_size = m_Param[SPH_SMOOTHRADIUS]*2.0;			// Grid cell size (2r)	
 	Grid_Setup ( m_Vec[SPH_VOLMIN], m_Vec[SPH_VOLMAX], m_Param[SPH_SIMSCALE], cell_size, 1.0 );												// Setup grid
@@ -503,7 +506,8 @@ void FluidSystem::SPH_ComputePressureGrid ()
 		deltaP /= m_Param[SPH_RESTDENSITY];
 		p->deltaPos = deltaP;
 
-		//p->density = 1.0f / p->density;
+		// neede dfor force
+		p->density = 1.0f / p->density;
 	}
 }
 
@@ -549,28 +553,28 @@ void FluidSystem::SPH_ComputeForceGridNC ()
 	}
 }
 
-void FluidSystem::SPH_ComputreVorticityAndViscosity()
-{
-	char* dat1, * dat1_end;
-	Fluid* p;
-	Fluid* pcurr;
-	int pndx;
-	int i, cnt = 0;
-	float dx, dy, dz, sum, dsq, c;
-	float d, mR, mR2;
-	float radius = m_Param[SPH_SMOOTHRADIUS] / m_Param[SPH_SIMSCALE];
-	d = m_Param[SPH_SIMSCALE];
-	mR = m_Param[SPH_SMOOTHRADIUS];
-	mR2 = mR * mR;
-
-	dat1_end = mBuf[0].data + NumPoints() * mBuf[0].stride;
-	i = 0;
-	for (dat1 = mBuf[0].data; dat1 < dat1_end; dat1 += mBuf[0].stride, i++) {
-		p = (Fluid*)dat1;
-
-		Grid_FindCells(p->pos, radius);
-
-
-
-	}
-}
+//void FluidSystem::SPH_ComputreVorticityAndViscosity()
+//{
+//	char* dat1, * dat1_end;
+//	Fluid* p;
+//	Fluid* pcurr;
+//	int pndx;
+//	int i, cnt = 0;
+//	float dx, dy, dz, sum, dsq, c;
+//	float d, mR, mR2;
+//	float radius = m_Param[SPH_SMOOTHRADIUS] / m_Param[SPH_SIMSCALE];
+//	d = m_Param[SPH_SIMSCALE];
+//	mR = m_Param[SPH_SMOOTHRADIUS];
+//	mR2 = mR * mR;
+//
+//	dat1_end = mBuf[0].data + NumPoints() * mBuf[0].stride;
+//	i = 0;
+//	for (dat1 = mBuf[0].data; dat1 < dat1_end; dat1 += mBuf[0].stride, i++) {
+//		p = (Fluid*)dat1;
+//
+//		Grid_FindCells(p->pos, radius);
+//
+//
+//
+//	}
+//}
