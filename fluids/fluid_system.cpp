@@ -410,7 +410,7 @@ void FluidSystem::SPH_ComputePressureGrid ()
 					pndx = pcurr->next;
 				}
 			}
-			//m_GridCell[cell] = -1;
+			m_GridCell[cell] = -1;
 		}
 		p->density = sum * m_Param[SPH_PMASS] * m_Poly6Kern ;	
 
@@ -429,28 +429,13 @@ void FluidSystem::SPH_ComputePressureGrid ()
 		float C = p->density / m_Param[SPH_RESTDENSITY] - 1;
 
 		float denominator = 0.f;
-		for (int cell = 0; cell < 8; cell++) {
-			if (m_GridCell[cell] != -1) {
-				pndx = m_Grid[m_GridCell[cell]];
-				while (pndx != -1) {
-					pcurr = (Fluid*)(mBuf[0].data + pndx * mBuf[0].stride);
-					if (pcurr == p)
-					{
-						//the case the k = i
-						pndx = pcurr->next;
-						continue;
-					}
 
-					denominator += pcurr->gradient.Dot(pcurr->gradient);
-					pndx = pcurr->next;
-				}
-			}
-			m_GridCell[cell] = -1;
+		for (int j = 0; j < m_NC[i]; j++) {
+			pcurr = (Fluid*)(mBuf[0].data + m_Neighbor[i][j] * mBuf[0].stride);
+			denominator += pcurr->gradient.Dot(pcurr->gradient);
 		}
 
 		p->lambda = -C / denominator;
-
-		//p->density = 1.0f / p->density;
 	}
 
 
@@ -467,46 +452,33 @@ void FluidSystem::SPH_ComputePressureGrid ()
 
 		Vector3DF deltaP(0.f,0.f,0.f);
 
-		for (int cell = 0; cell < 8; cell++) {
-			if (m_GridCell[cell] != -1) {
-				pndx = m_Grid[m_GridCell[cell]];
-				while (pndx != -1) {
-					pcurr = (Fluid*)(mBuf[0].data + pndx * mBuf[0].stride);
-					if (pcurr == p)
-					{
-						//the case the k = i
-						pndx = pcurr->next;
-						continue;
-					}
-					dx = (p->pos.x - pcurr->pos.x) * d;		// dist in cm
-					dy = (p->pos.y - pcurr->pos.y) * d;
-					dz = (p->pos.z - pcurr->pos.z) * d;
-					dsq = (dx * dx + dy * dy + dz * dz);
-					if (mR2 > dsq) {
-						// artificial pressure/surface correction calculation
-						c = m_R2 - dsq;
-						float numerator = m_Poly6Kern * c * c * c;
-						float base = numerator / Scorr_denominator;
-						base = base * base * base * base; // n=4
-						float Scorr = -0.1 * base;// k = 0.1
+		for (int j = 0; j < m_NC[i]; j++) {
+			pcurr = (Fluid*)(mBuf[0].data + m_Neighbor[i][j] * mBuf[0].stride);
 
-						//gradient calculation
-						float magnitudeR = sqrt(dsq);
-						Vector3DF r(dx, dy, dz);
-						r *= -m_SpikyKern * (mR - magnitudeR) * (mR - magnitudeR) / magnitudeR;
-						r *= p->lambda + pcurr->lambda + Scorr;
-						deltaP += r;
-					}
-					pndx = pcurr->next;
-				}
-			}
-			//m_GridCell[cell] = -1;
+			float magnitudeR = m_NDist[i][j];
+			dx = (p->pos.x - pcurr->pos.x) * d;		// dist in cm
+			dy = (p->pos.y - pcurr->pos.y) * d;
+			dz = (p->pos.z - pcurr->pos.z) * d;
+			//dsq = (dx * dx + dy * dy + dz * dz);
+
+			// artificial pressure/surface correction calculation
+			c = m_R2 - magnitudeR * magnitudeR;
+			float numerator = m_Poly6Kern * c * c * c;
+			float base = numerator / Scorr_denominator;
+			base = base * base * base * base; // n=4
+			float Scorr = -0.1 * base;// k = 0.1
+
+			//gradient calculation
+			//float magnitudeR = sqrt(dsq);
+			Vector3DF r(dx, dy, dz);
+			r *= -m_SpikyKern * (mR - magnitudeR) * (mR - magnitudeR) / magnitudeR;
+			r *= p->lambda + pcurr->lambda + Scorr;
+			deltaP += r;
 		}
 
 		deltaP /= m_Param[SPH_RESTDENSITY];
 		p->deltaPos = deltaP;
 
-		// neede dfor force
 		p->density = 1.0f / p->density;
 	}
 }
@@ -553,28 +525,28 @@ void FluidSystem::SPH_ComputeForceGridNC ()
 	}
 }
 
-//void FluidSystem::SPH_ComputreVorticityAndViscosity()
-//{
-//	char* dat1, * dat1_end;
-//	Fluid* p;
-//	Fluid* pcurr;
-//	int pndx;
-//	int i, cnt = 0;
-//	float dx, dy, dz, sum, dsq, c;
-//	float d, mR, mR2;
-//	float radius = m_Param[SPH_SMOOTHRADIUS] / m_Param[SPH_SIMSCALE];
-//	d = m_Param[SPH_SIMSCALE];
-//	mR = m_Param[SPH_SMOOTHRADIUS];
-//	mR2 = mR * mR;
-//
-//	dat1_end = mBuf[0].data + NumPoints() * mBuf[0].stride;
-//	i = 0;
-//	for (dat1 = mBuf[0].data; dat1 < dat1_end; dat1 += mBuf[0].stride, i++) {
-//		p = (Fluid*)dat1;
-//
-//		Grid_FindCells(p->pos, radius);
-//
-//
-//
-//	}
-//}
+void FluidSystem::SPH_ComputeVorticityAndViscosity()
+{
+	char* dat1, * dat1_end;
+	Fluid* p;
+	Fluid* pcurr;
+	int pndx;
+	int i, cnt = 0;
+	float dx, dy, dz, sum, dsq, c;
+	float d, mR, mR2;
+	float radius = m_Param[SPH_SMOOTHRADIUS] / m_Param[SPH_SIMSCALE];
+	d = m_Param[SPH_SIMSCALE];
+	mR = m_Param[SPH_SMOOTHRADIUS];
+	mR2 = mR * mR;
+
+	dat1_end = mBuf[0].data + NumPoints() * mBuf[0].stride;
+	i = 0;
+	for (dat1 = mBuf[0].data; dat1 < dat1_end; dat1 += mBuf[0].stride, i++) {
+		p = (Fluid*)dat1;
+
+		Grid_FindCells(p->pos, radius);
+
+
+
+	}
+}
