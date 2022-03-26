@@ -224,8 +224,8 @@ void FluidSystem::Advance ()
 		// Leapfrog Integration ----------------------------
 		vnext = accel;
 		vnext *= m_DT;
-		vnext += p->vel;		// v(t+1/2) = v(t-1/2) + a(t) dt
-		p->vel_eval = p->vel;
+		vnext += p->vel;		// v(t+1/2) = v(t-1/2) + a(t) dt     //p->vel_after_visc
+		p->vel_eval = p->vel;    //p->vel_after_visc
 		p->vel_eval += vnext;
 		p->vel_eval *= 0.5;		// v(t+1) = [v(t-1/2) + v(t+1/2)] * 0.5	  used to compute forces later
 		p->vel = vnext;
