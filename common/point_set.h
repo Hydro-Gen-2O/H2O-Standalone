@@ -30,7 +30,6 @@
 	#include <math.h>
 	
 	#include "common_defs.h"
-	#include "geomx.h"
 	#include "vector.h"
 	#include "fluid.h"
 
@@ -50,30 +49,26 @@
 	#define POINT_GRAV_POS		5	
 	#define PLANE_GRAV_DIR		6
 
-	struct Point {
-		Vector3DF		pos;
-		DWORD			clr;
-		int				next;
+	typedef unsigned short		ushort;
+
+	class GeomBuf {
+	public:
+		ushort stride;
+		char* data;
 	};
 
-	class PointSet : public GeomX {
+	class PointSet {
 	public:
 		PointSet ();
 
 		// Point Sets
 		virtual void Draw ( float* view_mat, float rad );		
-		virtual void Reset ();		
-		Point* GetPoint ( int n )		{ return (Point*) GetElem(n); }		
+		virtual void Reset ();
 		
 		// Parameters			
 		void SetParam (int p, float v )		{ m_Param[p] = v; }
 		void SetParam (int p, int v )		{ m_Param[p] = (float) v; }
 		float GetParam ( int p )			{ return (float) m_Param[p]; }
-		Vector3DF GetVec ( int p )			{ return m_Vec[p]; }
-		void SetVec ( int p, Vector3DF v )	{ m_Vec[p] = v; }
-		void Toggle ( int p )				{ m_Toggle[p] = !m_Toggle[p]; }		
-		bool GetToggle ( int p )			{ return m_Toggle[p]; }
-		float GetDT()						{ return (float) m_DT; }
 
 		// Spatial Subdivision
 		void Grid_Setup ( Vector3DF min, Vector3DF max, float sim_scale, float cell_size, float border );		
@@ -81,12 +76,12 @@
 		void Grid_FindCells ( Vector3DF p, float radius );
 
 	protected:
+		GeomBuf mBuf;
 		std::vector<std::unique_ptr<Fluid>> fluidPs;
 
 		// Parameters
 		double						m_Param [ MAX_PARAM ];			// see defines above
-		Vector3DF					m_Vec [ MAX_PARAM ];
-		bool						m_Toggle [ MAX_PARAM ];
+		Vector3DF					m_Vec[MAX_PARAM];
 		
 		// Particle System
 		double						m_DT;

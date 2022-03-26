@@ -43,21 +43,21 @@ void PointSet::Reset ()
 	m_Param[POINT_GRAV] = 100.0;
 	m_Param[PLANE_GRAV] = 0.0;
 	
-	m_Vec[ POINT_GRAV_POS].Set(0,0,50.0);
-	m_Vec[ PLANE_GRAV_DIR].Set(0,0,-9.8);
+	m_Vec[POINT_GRAV_POS].Set(0, 0, 50.0);
+	m_Vec[PLANE_GRAV_DIR].Set(0, 0, -9.8);
 }
 
 void PointSet::Draw ( float* view_mat, float rad )
 {
 	char* dat;
-	Point* p;
+	Fluid* p;
 	glEnable ( GL_NORMALIZE );	
 
 	if ( m_Param[PNT_DRAWMODE] == 0 ) {
 		glLoadMatrixf ( view_mat );
 		dat = mBuf.data;	
 		for (int n = 0; n < fluidPs.size(); n++) {
-			p = (Point*) dat;
+			p = (Fluid*) dat;
 			glPushMatrix ();
 			glTranslatef ( p->pos.x, p->pos.y, p->pos.z );		
 			glScalef ( 0.2, 0.2, 0.2 );			
@@ -71,7 +71,7 @@ void PointSet::Draw ( float* view_mat, float rad )
 		dat = mBuf.data;
 		glBegin ( GL_POINTS );
 		for (int n=0; n < fluidPs.size(); n++) {
-			p = (Point*) dat;
+			p = (Fluid*) dat;
 			glColor3f ( RED(p->clr), GRN(p->clr), BLUE(p->clr) );			
 			glVertex3f ( p->pos.x, p->pos.y, p->pos.z );			
 			dat += mBuf.stride;
@@ -86,7 +86,8 @@ void PointSet::Draw ( float* view_mat, float rad )
 void PointSet::Grid_Setup ( Vector3DF min, Vector3DF max, float sim_scale, float cell_size, float border )
 {
 	float world_cellsize = cell_size / sim_scale;
-	m_Grid.clear ();
+	m_Grid.clear();
+	m_GridCnt.clear();
 	m_GridMin = min;	m_GridMin -= border;
 	m_GridMax = max;	m_GridMax += border;
 	m_GridSize = m_GridMax;
@@ -102,37 +103,30 @@ void PointSet::Grid_Setup ( Vector3DF min, Vector3DF max, float sim_scale, float
 	m_GridDelta /= m_GridSize;
 	m_GridTotal = (int)(m_GridSize.x * m_GridSize.y * m_GridSize.z);
 
-	m_Grid.clear ();
-	m_GridCnt.clear ();
-
 	m_Grid.reserve ( m_GridTotal );
 	m_GridCnt.reserve ( m_GridTotal );	
-	for (int n=0; n < m_GridTotal; n++) {
-		m_Grid.push_back ( -1 );
-		m_GridCnt.push_back ( 0 );
+	for (int n = 0; n < m_GridTotal; n++) {
+		m_Grid.push_back(-1);
+		m_GridCnt.push_back(0);
 	}
 }
 
 void PointSet::Grid_InsertParticles ()
 {
 	char *dat1, *dat1_end;
-	Point *p;
+	Fluid* p;
 	int gs;
 	int gx, gy, gz;
 	
-	dat1_end = mBuf.data + fluidPs.size() *mBuf.stride;
-	for ( dat1 = mBuf.data; dat1 < dat1_end; dat1 += mBuf.stride ) 
-		((Point*) dat1)->next = -1;	
-
-	for (int n=0; n < m_GridTotal; n++) {
+	for (int n = 0; n < m_GridTotal; n++) {
 		m_Grid[n] = -1;
 		m_GridCnt[n] = 0;
 	}
 
-	dat1_end = mBuf.data + fluidPs.size() *mBuf.stride;
 	int n = 0;
+	dat1_end = mBuf.data + fluidPs.size() * mBuf.stride;
 	for ( dat1 = mBuf.data; dat1 < dat1_end; dat1 += mBuf.stride ) {
-		p = (Point*) dat1;
+		p = (Fluid*) dat1;
 		gx = (int)( (p->pos.x - m_GridMin.x) * m_GridDelta.x);		// Determine grid cell
 		gy = (int)( (p->pos.y - m_GridMin.y) * m_GridDelta.y);
 		gz = (int)( (p->pos.z - m_GridMin.z) * m_GridDelta.z);

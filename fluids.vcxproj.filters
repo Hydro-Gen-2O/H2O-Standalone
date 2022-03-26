@@ -15,9 +15,6 @@
     <ClCompile Include="fluids\fluid_system.cpp">
       <Filter>fluids</Filter>
     </ClCompile>
-    <ClCompile Include="common\geomx.cpp">
-      <Filter>common</Filter>
-    </ClCompile>
     <ClCompile Include="common\gl_helper.cpp">
       <Filter>common</Filter>
     </ClCompile>
@@ -43,9 +40,6 @@
       <Filter>fluids</Filter>
     </ClInclude>
     <ClInclude Include="common\common_defs.h">
-      <Filter>common</Filter>
-    </ClInclude>
-    <ClInclude Include="common\geomx.h">
       <Filter>common</Filter>
     </ClInclude>
     <ClInclude Include="common\gl_helper.h">

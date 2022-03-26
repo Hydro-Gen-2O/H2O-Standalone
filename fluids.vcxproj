@@ -106,7 +106,6 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="common\geomx.cpp" />
     <ClCompile Include="common\gl_helper.cpp" />
     <ClCompile Include="common\matrix.cpp" />
     <ClCompile Include="common\mdebug.cpp" />
@@ -118,7 +117,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="common\common_defs.h" />
-    <ClInclude Include="common\geomx.h" />
     <ClInclude Include="common\gl_helper.h" />
     <ClInclude Include="common\matrix-inline.h" />
     <ClInclude Include="common\matrix.h" />

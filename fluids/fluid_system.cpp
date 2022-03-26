@@ -50,8 +50,7 @@ void FluidSystem::SPH_DrawDomain()
 	glEnd();
 }
 
-void FluidSystem::SPH_CreateExample(int n, int nmax)
-{
+void FluidSystem::SPH_Setup(int n) {
 	m_Param[MAX_FRAC] = 1.0;
 	m_Param[POINT_GRAV] = 0.0;
 	m_Param[PLANE_GRAV] = 1.0;
@@ -59,23 +58,27 @@ void FluidSystem::SPH_CreateExample(int n, int nmax)
 	m_Param[BOUND_ZMIN_SLOPE] = 0.0;
 	m_Param[FORCE_XMAX_SIN] = 0.0;
 	m_Param[FORCE_XMIN_SIN] = 0.0;
-	m_Param[SPH_INTSTIFF] = 1.00;
-	m_Param[SPH_VISC] = 0.2;
-	m_Param[SPH_INTSTIFF] = 0.50;
-	m_Param[SPH_EXTSTIFF] = 20000;
 	m_Param[SPH_SMOOTHRADIUS] = 0.01;
 
 	m_Vec[POINT_GRAV_POS].Set(0, 0, 50);
 	m_Vec[PLANE_GRAV_DIR].Set(0, 0, -9.8);
 
-	m_DT = 0.003; //  0.001;			// .001 = for point grav
+	m_Param[SPH_SIMSCALE] = 0.004;			// unit size
+	m_Param[SPH_VISC] = 0.2;			// pascal-second (Pa.s) = 1 kg m^-1 s^-1  (see wikipedia page on viscosity)
+	m_Param[SPH_RESTDENSITY] = 600.0;			// kg / m^3
+	m_Param[SPH_PMASS] = 0.00020543;		// kg
+	m_Param[SPH_PRADIUS] = 0.004;			// m
+	m_Param[SPH_INTSTIFF] = 1.00;
+	m_Param[SPH_EXTSTIFF] = 10000.0;
+	m_Param[SPH_EXTDAMP] = 256.0;
+	m_Param[SPH_LIMIT] = 200.0;			// m / s
 
-	maxPoints = nmax;
-	mBuf.stride = sizeof(Fluid);
-	fluidPs.clear();
-	mBuf.data = (char*)malloc(maxPoints * mBuf.stride);
-
-	SPH_Setup();
+	// kernel computation
+	m_Param[SPH_PDIST] = pow(m_Param[SPH_PMASS] / m_Param[SPH_RESTDENSITY], 1 / 3.0);
+	m_R2 = m_Param[SPH_SMOOTHRADIUS] * m_Param[SPH_SMOOTHRADIUS];
+	m_Poly6Kern = 315.0f / (64.0f * 3.141592 * pow(m_Param[SPH_SMOOTHRADIUS], 9));	// Wpoly6 kernel (denominator part) - 2003 Muller, p.4
+	m_SpikyKern = -45.0f / (3.141592 * pow(m_Param[SPH_SMOOTHRADIUS], 6));			// grad of spiky (no minus)
+	m_LapKern = 45.0f / (3.141592 * pow(m_Param[SPH_SMOOTHRADIUS], 6));
 
 	switch (n) {
 	case -1:		// fluid drop
@@ -96,14 +99,25 @@ void FluidSystem::SPH_CreateExample(int n, int nmax)
 		break;
 	}
 	m_Param[SPH_SIMSIZE] = m_Param[SPH_SIMSCALE] * (m_Vec[SPH_VOLMAX].z - m_Vec[SPH_VOLMIN].z);
-	m_Param[SPH_PDIST] = pow(m_Param[SPH_PMASS] / m_Param[SPH_RESTDENSITY], 1 / 3.0);
+
+	m_DT = 0.003; //  0.001;			// .001 = for point grav
+}
+
+void FluidSystem::SPH_CreateExample(int n, int nmax)
+{
+	// setting up stuff
+	SPH_Setup(n);
+
+	maxPoints = nmax;
+	mBuf.stride = sizeof(Fluid);
+	fluidPs.clear();
+	mBuf.data = (char*)malloc(maxPoints * mBuf.stride);
 
 	float ss = m_Param[SPH_PDIST] * 0.87 / m_Param[SPH_SIMSCALE];
 	//printf ( "Spacing: %f\n", ss);
 	Vector3DF min = m_Vec[SPH_INITMIN];
 	Vector3DF max = m_Vec[SPH_INITMAX];
-	Vector3DF pos;
-	Point* p;
+	Fluid* p;
 	float dx, dy, dz;
 	dx = max.x - min.x;
 	dy = max.y - min.y;
@@ -111,9 +125,8 @@ void FluidSystem::SPH_CreateExample(int n, int nmax)
 	for (float z = max.z; z >= min.z; z -= ss) {
 		for (float y = min.y; y <= max.y; y += ss) {
 			for (float x = min.x; x <= max.x; x += ss) {
-				p = GetPoint(AddPointReuse());
-				pos.Set(x, y, z);
-				p->pos = pos;
+				p = (Fluid*)(mBuf.data + AddPointReuse() * mBuf.stride);
+				p->pos.Set(x, y, z);
 				p->clr = COLORA((x - min.x) / dx, (y - min.y) / dy, (z - min.z) / dz, 1);
 			}
 		}
@@ -137,6 +150,7 @@ int FluidSystem::AddPointReuse ()
 	if (fluidPs.size() < maxPoints - 2) {
 		ndx = fluidPs.size();
 		f = (Fluid*) (mBuf.data + ndx * mBuf.stride);
+		
 		fluidPs.push_back(std::make_unique<Fluid>(*f));
 	} else {
 		ndx = rand() % fluidPs.size();
@@ -315,31 +329,6 @@ void FluidSystem::Advance ()
 // Ideal domain size = k*gs/d = k*0.02*2/0.005 = k*8 = {8, 16, 24, 32, 40, 48, ..}
 //    (k = number of cells, gs = cell size, d = simulation scale)
 
-void FluidSystem::SPH_Setup ()
-{
-	m_Param [ SPH_SIMSCALE ] =		0.004;			// unit size
-	m_Param [ SPH_VISC ] =			0.2;			// pascal-second (Pa.s) = 1 kg m^-1 s^-1  (see wikipedia page on viscosity)
-	m_Param [ SPH_RESTDENSITY ] =	600.0;			// kg / m^3
-	m_Param [ SPH_PMASS ] =			0.00020543;		// kg
-	m_Param [ SPH_PRADIUS ] =		0.004;			// m
-	m_Param [ SPH_PDIST ] =			0.0059;			// m
-	m_Param [ SPH_SMOOTHRADIUS ] =	0.01;			// m 
-	m_Param [ SPH_INTSTIFF ] =		1.00;
-	m_Param [ SPH_EXTSTIFF ] =		10000.0;
-	m_Param [ SPH_EXTDAMP ] =		256.0;
-	m_Param [ SPH_LIMIT ] =			200.0;			// m / s
-
-	SPH_ComputeKernels ();
-}
-
-void FluidSystem::SPH_ComputeKernels ()
-{
-	m_Param[SPH_PDIST] = pow(m_Param[SPH_PMASS] / m_Param[SPH_RESTDENSITY], 1 / 3.0);
-	m_R2 = m_Param [SPH_SMOOTHRADIUS] * m_Param[SPH_SMOOTHRADIUS];
-	m_Poly6Kern = 315.0f / (64.0f * 3.141592 * pow( m_Param[SPH_SMOOTHRADIUS], 9) );	// Wpoly6 kernel (denominator part) - 2003 Muller, p.4
-	m_SpikyKern = -45.0f / (3.141592 * pow( m_Param[SPH_SMOOTHRADIUS], 6) );			// grad of spiky (no minus)
-	m_LapKern = 45.0f / (3.141592 * pow( m_Param[SPH_SMOOTHRADIUS], 6) );
-}
 
 
 void FluidSystem::SPH_ComputeForceGridNC()

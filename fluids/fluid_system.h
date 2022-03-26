@@ -70,10 +70,9 @@
 		virtual int AddPointReuse ();
 		
 		// Smoothed Particle Hydrodynamics
-		void SPH_Setup ();
-		void SPH_CreateExample ( int n, int nmax );
+		void SPH_Setup(int n);
+		void SPH_CreateExample(int n, int nmax);
 		void SPH_DrawDomain ();
-		void SPH_ComputeKernels ();
 
 		void SPH_ComputePressureGrid ();			// O(kn) - spatial grid
 		
