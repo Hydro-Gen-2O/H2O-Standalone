@@ -125,7 +125,6 @@ void draw2D ()
 		sprintf ( disp,	"Kernel:  USING CPU" );				drawText ( 20, 40,  disp );
 
 		sprintf ( disp,	"KEYBOARD" );						drawText ( 20, 60,  disp );
-		sprintf ( disp,	"[ ]    Next/Prev Demo" );			drawText ( 20, 70,  disp );
 		sprintf ( disp,	"space  Pause" );					drawText ( 20, 90,  disp );
 		sprintf ( disp,	"S      Shading mode" );			drawText ( 20, 100,  disp );	
 		sprintf ( disp,	"X      Draw velocity/pressure/color" );	drawText ( 20, 170,  disp );
@@ -134,7 +133,6 @@ void draw2D ()
 		vol -= psys.GetVec(SPH_VOLMIN);
 		sprintf ( disp,	"Volume Size:           %3.5f %3.2f %3.2f", vol.x, vol.y, vol.z );	drawText ( 20, 190,  disp );
 		sprintf ( disp,	"Time Step (dt):        %3.5f", psys.GetDT () );					drawText ( 20, 200,  disp );
-		sprintf ( disp,	"Num Particles:         %d", psys.NumPoints() );					drawText ( 20, 210,  disp );		
 		sprintf ( disp,	"Simulation Scale:      %3.5f", psys.GetParam(SPH_SIMSIZE) );		drawText ( 20, 220,  disp );
 		sprintf ( disp,	"Simulation Size (m):   %3.5f", psys.GetParam(SPH_SIMSCALE) );		drawText ( 20, 230,  disp );
 		sprintf ( disp,	"Smooth Radius (m):     %3.3f", psys.GetParam(SPH_SMOOTHRADIUS) );	drawText ( 20, 240,  disp );
@@ -220,16 +218,6 @@ void keyboard_func ( unsigned char key, int x, int y )
 {
 	// m: run sim with double particles; n run sim with half
 	switch( key ) {
-	case 'M': case 'm': {
-		psys_nmax *= 2;
-		if ( psys_nmax > 65535 ) psys_nmax = 65535;		
-		psys.SPH_CreateExample ( psys_demo, psys_nmax );
-		} break;
-	case 'N': case 'n': {
-		psys_nmax /= 2;
-		if ( psys_nmax < 64 ) psys_nmax = 64;		
-		psys.SPH_CreateExample ( psys_demo, psys_nmax );
-		} break;
 	case 'h': case 'H':	bHelp = !bHelp; break;
 	case 'x': case 'X':
 		if ( ++iClrMode > 2) iClrMode = 0;
@@ -244,16 +232,6 @@ void keyboard_func ( unsigned char key, int x, int y )
 	case ' ':		
 		//psys.Run (); ptris.Rebuild (); break;
 		bPause = !bPause;	break;
-	case '[':
-		psys_demo--;
-		if (psys_demo < 0 ) psys_demo = 10;
-		psys.SPH_CreateExample ( psys_demo, psys_nmax );
-		break;
-	case ']':
-		psys_demo++;
-		if (psys_demo > 10 ) psys_demo = 0;
-		psys.SPH_CreateExample ( psys_demo, psys_nmax );
-		break;
 	default:
 	break;
   }
@@ -340,7 +318,6 @@ void init ()
 	cam_to.x = 0;		cam_to.y = 0;		cam_to.z = 5;
 	cam_fov = 35.0;
 
-	psys.Initialize ( psys_nmax );
 	psys.SPH_CreateExample ( psys_demo, psys_nmax );
 
 	psys.SetParam ( PNT_DRAWMODE, int(bPntDraw ? 1:0) );

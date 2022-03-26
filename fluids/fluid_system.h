@@ -65,8 +65,6 @@
 		FluidSystem ();
 
 		// Basic Particle System
-		virtual void Initialize ( int nmax );
-		virtual void Reset ( int nmax );
 		virtual void Run ();
 		virtual void Advance ();	
 		virtual int AddPointReuse ();

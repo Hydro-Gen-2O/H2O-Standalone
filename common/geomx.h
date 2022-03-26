@@ -23,35 +23,11 @@
 #ifndef DEF_GEOM
 	#define DEF_GEOM
 
-	#include <vector>
-
-	#define	HEAP_MAX			2147483640	// largest heap size (range of hpos)
-
-	#define	ELEM_MAX			2147483640	// largest number of elements in a buffer (range of hval)
-	//#define ELEM_MAX			32768		// largest number of elements in a buffer (range of hval)
-
-	#define BUF_UNDEF			255
-
-	#define FPOS				2			// free position offsets
-	typedef unsigned char		uchar;
 	typedef unsigned short		ushort;
-	typedef signed int			hpos;		// pointers into heap
-	typedef signed int			hval;		// values in heap	
-	typedef hval				href;		// values are typically references 
-	struct hList {
-		ushort		cnt;
-		ushort		max;
-		hpos		pos;
-	};
 
 	class GeomBuf {
 	public:
-		GeomBuf()	{ dtype = 0; num = 0; max = 0; stride = 0; data = 0x0; }		
-		uchar		dtype;
-		hval		num;
-		hval		max;
-		long		size;
-		ushort		stride;		
+		ushort		stride;
 		char*		data;
 	};
 
@@ -59,16 +35,10 @@
 	public:
 		GeomX ();
 		// Basic geometry setup	
-		void FreeBuffers ();
-		void ResetBuffer ( uchar b, int n );
-		int AddBuffer ( uchar typ, ushort stride, int max );
-		
-		int NumElem ( uchar b )				{ if ( b==BUF_UNDEF) return 0; else return mBuf[b].num; }		
-		char* GetElem ( uchar b, int n )	{ return mBuf[b].data + n*mBuf[b].stride; }
-		char* AddElem(uchar b, href& pos);
+		char* GetElem ( int n )	{ return mBuf.data + n*mBuf.stride; }
 		
 	protected:
-		std::vector< GeomBuf > mBuf;
+		GeomBuf mBuf;
 	};
 
 #endif

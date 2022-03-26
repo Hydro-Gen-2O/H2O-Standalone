@@ -32,6 +32,7 @@
 	#include "common_defs.h"
 	#include "geomx.h"
 	#include "vector.h"
+	#include "fluid.h"
 
 	typedef signed int		xref;
 	
@@ -54,14 +55,6 @@
 		DWORD			clr;
 		int				next;
 	};
-	
-	struct Particle {	
-		Vector3DF		pos;
-		DWORD			clr;
-		int				next;
-		Vector3DF		vel;			
-		Vector3DF		vel_eval;
-	};
 
 	class PointSet : public GeomX {
 	public:
@@ -70,8 +63,7 @@
 		// Point Sets
 		virtual void Draw ( float* view_mat, float rad );		
 		virtual void Reset ();		
-		Point* GetPoint ( int n )		{ return (Point*) GetElem(0, n); }		
-		int	NumPoints ()				{ return NumElem(0); }
+		Point* GetPoint ( int n )		{ return (Point*) GetElem(n); }		
 		
 		// Parameters			
 		void SetParam (int p, float v )		{ m_Param[p] = v; }
@@ -89,6 +81,8 @@
 		void Grid_FindCells ( Vector3DF p, float radius );
 
 	protected:
+		std::vector<std::unique_ptr<Fluid>> fluidPs;
+
 		// Parameters
 		double						m_Param [ MAX_PARAM ];			// see defines above
 		Vector3DF					m_Vec [ MAX_PARAM ];

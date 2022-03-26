@@ -55,8 +55,8 @@ void PointSet::Draw ( float* view_mat, float rad )
 
 	if ( m_Param[PNT_DRAWMODE] == 0 ) {
 		glLoadMatrixf ( view_mat );
-		dat = mBuf[0].data;	
-		for (int n = 0; n < NumPoints(); n++) {
+		dat = mBuf.data;	
+		for (int n = 0; n < fluidPs.size(); n++) {
 			p = (Point*) dat;
 			glPushMatrix ();
 			glTranslatef ( p->pos.x, p->pos.y, p->pos.z );		
@@ -64,17 +64,17 @@ void PointSet::Draw ( float* view_mat, float rad )
 			glColor4f ( RED(p->clr), GRN(p->clr), BLUE(p->clr), ALPH(p->clr) );
 			drawSphere ();
 			glPopMatrix ();		
-			dat += mBuf[0].stride;
+			dat += mBuf.stride;
 		}	
 	} else if ( m_Param[PNT_DRAWMODE] == 1 ) {
 		glLoadMatrixf ( view_mat );
-		dat = mBuf[0].data;
+		dat = mBuf.data;
 		glBegin ( GL_POINTS );
-		for (int n=0; n < NumPoints(); n++) {
+		for (int n=0; n < fluidPs.size(); n++) {
 			p = (Point*) dat;
 			glColor3f ( RED(p->clr), GRN(p->clr), BLUE(p->clr) );			
 			glVertex3f ( p->pos.x, p->pos.y, p->pos.z );			
-			dat += mBuf[0].stride;
+			dat += mBuf.stride;
 		}
 		glEnd ();
 	}
@@ -120,8 +120,8 @@ void PointSet::Grid_InsertParticles ()
 	int gs;
 	int gx, gy, gz;
 	
-	dat1_end = mBuf[0].data + NumPoints()*mBuf[0].stride;
-	for ( dat1 = mBuf[0].data; dat1 < dat1_end; dat1 += mBuf[0].stride ) 
+	dat1_end = mBuf.data + fluidPs.size() *mBuf.stride;
+	for ( dat1 = mBuf.data; dat1 < dat1_end; dat1 += mBuf.stride ) 
 		((Point*) dat1)->next = -1;	
 
 	for (int n=0; n < m_GridTotal; n++) {
@@ -129,9 +129,9 @@ void PointSet::Grid_InsertParticles ()
 		m_GridCnt[n] = 0;
 	}
 
-	dat1_end = mBuf[0].data + NumPoints()*mBuf[0].stride;
+	dat1_end = mBuf.data + fluidPs.size() *mBuf.stride;
 	int n = 0;
-	for ( dat1 = mBuf[0].data; dat1 < dat1_end; dat1 += mBuf[0].stride ) {
+	for ( dat1 = mBuf.data; dat1 < dat1_end; dat1 += mBuf.stride ) {
 		p = (Point*) dat1;
 		gx = (int)( (p->pos.x - m_GridMin.x) * m_GridDelta.x);		// Determine grid cell
 		gy = (int)( (p->pos.y - m_GridMin.y) * m_GridDelta.y);
