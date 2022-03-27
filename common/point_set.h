@@ -25,15 +25,10 @@
 
 	#include <iostream>
 	#include <vector>
-	#include <stdio.h>
-	#include <stdlib.h>
-	#include <math.h>
 	
 	#include "common_defs.h"
 	#include "vector.h"
 	#include "fluid.h"
-
-	typedef signed int		xref;
 	
 	#define MAX_NEIGHBOR		80
 	
@@ -48,14 +43,6 @@
 	// Vector params
 	#define POINT_GRAV_POS		5	
 	#define PLANE_GRAV_DIR		6
-
-	typedef unsigned short		ushort;
-
-	class GeomBuf {
-	public:
-		ushort stride;
-		char* data;
-	};
 
 	class PointSet {
 	public:

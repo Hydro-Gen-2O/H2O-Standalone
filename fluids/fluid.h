@@ -27,8 +27,16 @@
 
 	#include "common_defs.h"
 
-	struct Fluid {
+	class Fluid {
 	public:
+		Fluid() {
+			sph_force.Set(0, 0, 0);
+			vel.Set(0, 0, 0);
+			vel_eval.Set(0, 0, 0);
+			next = 0x0;
+			pressure = 0;
+			density = 0;
+		}
 		Vector3DF		pos;			// Basic particle (must match Particle class)
 		DWORD			clr;
 		int				next;

@@ -33,7 +33,6 @@
 	#include "fluid.h"
 	
 	// Scalar params
-	#define SPH_SIMSIZE			4
 	#define SPH_SIMSCALE		5
 	#define SPH_VISC			6
 	#define SPH_RESTDENSITY		7
@@ -66,8 +65,7 @@
 
 		// Basic Particle System
 		virtual void Run ();
-		virtual void Advance ();	
-		virtual int AddPointReuse ();
+		virtual void Advance ();
 		
 		// Smoothed Particle Hydrodynamics
 		void SPH_Setup(int n);
@@ -75,7 +73,9 @@
 		void SPH_DrawDomain ();
 
 		void SPH_ComputePressureGrid ();			// O(kn) - spatial grid
-		void SPH_ComputePressureGridOld();
+		void SPH_ComputeDensity();
+		void SPH_ComputeLambda();
+		void SPH_ComputeCorrections();
 		void SPH_ComputeForceGridNC ();				// O(cn) - neighbor table
 
 		void SPH_ComputeVorticityAndViscosity();

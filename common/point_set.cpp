@@ -59,8 +59,6 @@ void PointSet::Draw ( float* view_mat, float rad )
 //	dat += mBuf.stride;
 //}
 //glEnd();
-
-
 		glLoadMatrixf(view_mat);
 		for (auto& f : fluidPs) {
 			glPushMatrix();
