@@ -76,8 +76,8 @@
 		void Grid_FindCells ( Vector3DF p, float radius );
 
 	protected:
-		GeomBuf mBuf;
 		std::vector<std::unique_ptr<Fluid>> fluidPs;
+		int maxPoints = 0;
 
 		// Parameters
 		double						m_Param [ MAX_PARAM ];			// see defines above
@@ -96,15 +96,12 @@
 		Vector3DF					m_GridRes;				// resolution in each axis
 		Vector3DF					m_GridSize;				// physical size in each axis
 		Vector3DF					m_GridDelta;
-		float						m_GridCellsize;
 		int							m_GridCell[27];
 
 		// Neighbor Table
 		unsigned short				m_NC[65536];			// neighbor table (600k)
 		unsigned short				m_Neighbor[65536][MAX_NEIGHBOR];	
 		float						m_NDist[65536][MAX_NEIGHBOR];
-
-		static int m_pcurr;
 	};
 
 #endif

@@ -33,8 +33,7 @@
 		DWORD			clr;
 		int				next;
 		Vector3DF		vel;			
-		Vector3DF		vel_eval;		
-		unsigned short	age;
+		Vector3DF		vel_eval;
 
 		float			pressure;		// Smoothed Particle Hydrodynamics
 		float			density;	

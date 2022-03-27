@@ -75,7 +75,7 @@
 		void SPH_DrawDomain ();
 
 		void SPH_ComputePressureGrid ();			// O(kn) - spatial grid
-		
+		void SPH_ComputePressureGridOld();
 		void SPH_ComputeForceGridNC ();				// O(cn) - neighbor table
 
 		void SPH_ComputeVorticityAndViscosity();

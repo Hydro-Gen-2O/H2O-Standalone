@@ -24,12 +24,9 @@
 
 #include "point_set.h"
 
-int PointSet::m_pcurr = -1;
-
 PointSet::PointSet ()
 {	
 	m_GridRes.Set ( 0, 0, 0 );
-	m_pcurr = -1;
 	Reset ();
 }
 
@@ -47,37 +44,32 @@ void PointSet::Reset ()
 	m_Vec[PLANE_GRAV_DIR].Set(0, 0, -9.8);
 }
 
+
 void PointSet::Draw ( float* view_mat, float rad )
 {
-	char* dat;
-	Fluid* p;
 	glEnable ( GL_NORMALIZE );	
 
-	if ( m_Param[PNT_DRAWMODE] == 0 ) {
-		glLoadMatrixf ( view_mat );
-		dat = mBuf.data;	
-		for (int n = 0; n < fluidPs.size(); n++) {
-			p = (Fluid*) dat;
-			glPushMatrix ();
-			glTranslatef ( p->pos.x, p->pos.y, p->pos.z );		
-			glScalef ( 0.2, 0.2, 0.2 );			
-			glColor4f ( RED(p->clr), GRN(p->clr), BLUE(p->clr), ALPH(p->clr) );
-			drawSphere ();
-			glPopMatrix ();		
-			dat += mBuf.stride;
-		}	
-	} else if ( m_Param[PNT_DRAWMODE] == 1 ) {
-		glLoadMatrixf ( view_mat );
-		dat = mBuf.data;
-		glBegin ( GL_POINTS );
-		for (int n=0; n < fluidPs.size(); n++) {
-			p = (Fluid*) dat;
-			glColor3f ( RED(p->clr), GRN(p->clr), BLUE(p->clr) );			
-			glVertex3f ( p->pos.x, p->pos.y, p->pos.z );			
-			dat += mBuf.stride;
+	// point drawmode
+//glLoadMatrixf(view_mat);
+//dat = mBuf.data;
+//glBegin(GL_POINTS);
+//	for (auto& p : fluidPs) {
+//	glColor3f(RED(p->clr), GRN(p->clr), BLUE(p->clr));
+//	glVertex3f(p->pos.x, p->pos.y, p->pos.z);
+//	dat += mBuf.stride;
+//}
+//glEnd();
+
+
+		glLoadMatrixf(view_mat);
+		for (auto& f : fluidPs) {
+			glPushMatrix();
+			glTranslatef(f->pos.x, f->pos.y, f->pos.z);
+			glScalef(0.2, 0.2, 0.2);
+			glColor4f(RED(f->clr), GRN(f->clr), BLUE(f->clr), ALPH(f->clr));
+			drawSphere();
+			glPopMatrix();
 		}
-		glEnd ();
-	}
 }
 
 // Ideal grid cell size (gs) = 2 * smoothing radius = 0.02*2 = 0.04
@@ -92,7 +84,6 @@ void PointSet::Grid_Setup ( Vector3DF min, Vector3DF max, float sim_scale, float
 	m_GridMax = max;	m_GridMax += border;
 	m_GridSize = m_GridMax;
 	m_GridSize -= m_GridMin;
-	m_GridCellsize = world_cellsize;
 	m_GridRes.x = ceil ( m_GridSize.x / world_cellsize );		// Determine grid resolution
 	m_GridRes.y = ceil ( m_GridSize.y / world_cellsize );
 	m_GridRes.z = ceil ( m_GridSize.z / world_cellsize );
@@ -113,37 +104,27 @@ void PointSet::Grid_Setup ( Vector3DF min, Vector3DF max, float sim_scale, float
 
 void PointSet::Grid_InsertParticles ()
 {
-	char *dat1, *dat1_end;
-	Fluid* p;
-	int gs;
-	int gx, gy, gz;
-	
 	for (int n = 0; n < m_GridTotal; n++) {
-		m_Grid[n] = -1;
-		m_GridCnt[n] = 0;
+		m_Grid.at(n) = -1;
+		m_GridCnt.at(n) = 0;
 	}
-
-	int n = 0;
-	dat1_end = mBuf.data + fluidPs.size() * mBuf.stride;
-	for ( dat1 = mBuf.data; dat1 < dat1_end; dat1 += mBuf.stride ) {
-		p = (Fluid*) dat1;
-		gx = (int)( (p->pos.x - m_GridMin.x) * m_GridDelta.x);		// Determine grid cell
-		gy = (int)( (p->pos.y - m_GridMin.y) * m_GridDelta.y);
-		gz = (int)( (p->pos.z - m_GridMin.z) * m_GridDelta.z);
-		gs = (int)( (gz*m_GridRes.y + gy)*m_GridRes.x + gx);		
-		if ( gs >= 0 && gs < m_GridTotal ) {
-			p->next = m_Grid[gs];
+	for (int n = 0; n < fluidPs.size(); ++n) {
+		std::unique_ptr<Fluid>& vecP = fluidPs.at(n);
+		int gx = (int)((vecP->pos.x - m_GridMin.x) * m_GridDelta.x);		// Determine grid cell
+		int gy = (int)((vecP->pos.y - m_GridMin.y) * m_GridDelta.y);
+		int gz = (int)((vecP->pos.z - m_GridMin.z) * m_GridDelta.z);
+		int gs = (int)((gz * m_GridRes.y + gy) * m_GridRes.x + gx);
+		if (gs >= 0 && gs < m_GridTotal) {
+			vecP->next = m_Grid[gs];
 			m_Grid[gs] = n;
 			m_GridCnt[gs]++;
 		}
-		n++;
 	}
 }
 
 void PointSet::Grid_FindCells ( Vector3DF p, float radius )
 {
 	Vector3DI sph_min;
-
 	// Compute sphere range
 	sph_min.x = (int)((-radius + p.x - m_GridMin.x) * m_GridDelta.x);
 	sph_min.y = (int)((-radius + p.y - m_GridMin.y) * m_GridDelta.y);
