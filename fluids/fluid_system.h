@@ -72,7 +72,6 @@
 		void SPH_CreateExample(int n, int nmax);
 		void SPH_DrawDomain ();
 
-		void SPH_ComputePressureGrid ();			// O(kn) - spatial grid
 		void SPH_ComputeDensity();
 		void SPH_ComputeLambda();
 		void SPH_ComputeCorrections();

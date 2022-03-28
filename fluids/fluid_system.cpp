@@ -176,7 +176,6 @@ void FluidSystem::SPH_ComputeDensity()
 						Vector3DF r(dx, dy, dz);
 						r *= m_SpikyKern;
 						r *= (m_Param[SPH_SMOOTHRADIUS] - lenR) * (m_Param[SPH_SMOOTHRADIUS] - lenR);
-						std::cout << " LEN: " << lenR << std::endl;
 						r /= lenR;
 						r /= m_Param[SPH_RESTDENSITY];
 						p->gradient += r;
@@ -221,17 +220,17 @@ void FluidSystem::SPH_ComputeCorrections() {
 
 		for (int j = 0; j < m_NC[i]; j++) {
 			std::unique_ptr<Fluid>& pcurr = fluidPs.at(m_Neighbor[i][j]);
-			float magnitudeR = m_NDist[i][j];
+			float lenR = m_NDist[i][j];
 			float dx = (p->pos.x - pcurr->pos.x) * m_Param[SPH_SIMSCALE];
 			float dy = (p->pos.y - pcurr->pos.y) * m_Param[SPH_SIMSCALE];
 			float dz = (p->pos.z - pcurr->pos.z) * m_Param[SPH_SIMSCALE];
 
 			Vector3DF r(dx, dy, dz);
-			r *= m_SpikyKern * // again, need negative?
-				(m_Param[SPH_SMOOTHRADIUS] - magnitudeR) * (m_Param[SPH_SMOOTHRADIUS] - magnitudeR)
-				/ magnitudeR *
-				(p->lambda + pcurr->lambda) / 
-				m_Param[SPH_RESTDENSITY];
+			r *= m_SpikyKern;
+			r *= (m_Param[SPH_SMOOTHRADIUS] - lenR) * (m_Param[SPH_SMOOTHRADIUS] - lenR);
+			r /= lenR;
+			r *= (p->lambda + pcurr->lambda);
+			r /= m_Param[SPH_RESTDENSITY];
 			p->deltaPos += r;
 		}
 	}
@@ -262,10 +261,10 @@ void FluidSystem::Advance()
 {
 	for (int i = 0; i < fluidPs.size(); ++i) {
 		std::unique_ptr<Fluid>& p = fluidPs.at(i);
-		std::cout << "p delP: " << p->deltaPos.x << " " << p->deltaPos.y << " " << p->deltaPos.z << std::endl;
-		std::cout << "p grad: " << p->gradient.x << " " << p->gradient.y << " " << p->gradient.z << std::endl;
-		std::cout << "p dens: " << p->density << std::endl;
-		std::cout << "p lamb: " << p->lambda << std::endl << std::endl;
+		//std::cout << "p delP: " << p->deltaPos.x << " " << p->deltaPos.y << " " << p->deltaPos.z << std::endl;
+		//std::cout << "p grad: " << p->gradient.x << " " << p->gradient.y << " " << p->gradient.z << std::endl;
+		//std::cout << "p dens: " << p->density << std::endl;
+		//std::cout << "p lamb: " << p->lambda << std::endl << std::endl;
 
 		//Vector3DF tmp = p->pos;
 		p->pos += p->deltaPos;
@@ -423,13 +422,28 @@ void FluidSystem::Advance()
 //---------
 
 
-
-// Compute Pressures - Using spatial grid, and also create neighbor table
-void FluidSystem::SPH_ComputePressureGrid()
-{
-	
-}
-
 void FluidSystem::SPH_ComputeVorticityAndViscosity()
 {
+	//char* dat1, * dat1_end;
+//Fluid* p;
+//Fluid* pcurr;
+//int pndx;
+//int i, cnt = 0;
+//float dx, dy, dz, sum, dsq, c;
+//float d, mR, mR2;
+//float radius = m_Param[SPH_SMOOTHRADIUS] / m_Param[SPH_SIMSCALE];
+//d = m_Param[SPH_SIMSCALE];
+//mR = m_Param[SPH_SMOOTHRADIUS];
+//mR2 = mR * mR;
+
+//dat1_end = mBuf.data + fluidPs.size() * mBuf.stride;
+//i = 0;
+//for (dat1 = mBuf.data; dat1 < dat1_end; dat1 += mBuf.stride, i++) {
+//	p = (Fluid*)dat1;
+
+//	Grid_FindCells(p->pos, radius);
+
+
+
+//}
 }
