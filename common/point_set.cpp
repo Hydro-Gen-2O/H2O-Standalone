@@ -107,13 +107,13 @@ void PointSet::Grid_InsertParticles ()
 		m_GridCnt.at(n) = 0;
 	}
 	for (int n = 0; n < fluidPs.size(); ++n) {
-		std::unique_ptr<Fluid>& vecP = fluidPs.at(n);
-		int gx = (int)((vecP->pos.x - m_GridMin.x) * m_GridDelta.x);		// Determine grid cell
-		int gy = (int)((vecP->pos.y - m_GridMin.y) * m_GridDelta.y);
-		int gz = (int)((vecP->pos.z - m_GridMin.z) * m_GridDelta.z);
+		std::unique_ptr<Fluid>& p = fluidPs.at(n);
+		int gx = (int)((p->pos.x - m_GridMin.x) * m_GridDelta.x);		// Determine grid cell
+		int gy = (int)((p->pos.y - m_GridMin.y) * m_GridDelta.y);
+		int gz = (int)((p->pos.z - m_GridMin.z) * m_GridDelta.z);
 		int gs = (int)((gz * m_GridRes.y + gy) * m_GridRes.x + gx);
 		if (gs >= 0 && gs < m_GridTotal) {
-			vecP->next = m_Grid[gs];
+			p->next = m_Grid[gs];
 			m_Grid[gs] = n;
 			m_GridCnt[gs]++;
 		}

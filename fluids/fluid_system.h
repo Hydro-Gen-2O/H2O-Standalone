@@ -67,10 +67,15 @@
 		virtual void Run ();
 		virtual void Advance ();
 		
+		void AdvanceOld();
+		void SPH_ComputeDensityOld();
+		
 		// Smoothed Particle Hydrodynamics
 		void SPH_Setup(int n);
 		void SPH_CreateExample(int n, int nmax);
 		void SPH_DrawDomain ();
+
+		void PBF_PredictPositions();
 
 		void SPH_ComputeDensity();
 		void SPH_ComputeLambda();

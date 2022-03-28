@@ -37,6 +37,7 @@
 			pressure = 0;
 			density = 0;
 		}
+		Vector3DF		predictPos;
 		Vector3DF		pos;			// Basic particle (must match Particle class)
 		DWORD			clr;
 		int				next;
