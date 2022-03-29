@@ -62,8 +62,8 @@ void FluidSystem::SPH_Setup(int n) {
 	m_Vec[PLANE_GRAV_DIR].Set(0, 0, -9.8);
 
 	m_Param[SPH_SIMSCALE] = 0.004;// 0.004;			// unit size
-	m_Param[SPH_RESTDENSITY] = 1000.0; //600.0;			// kg / m^3
-	m_Param[SPH_PMASS] = 0.00016543;// 0.00020543;		// kg
+	m_Param[SPH_RESTDENSITY] = 600.0; //600.0;			// kg / m^3
+	m_Param[SPH_PMASS] = 0.00020543;// 0.00020543;		// kg
 
 	m_Param[SPH_LIMIT] = 200.0;			// m / s
 
@@ -77,8 +77,8 @@ void FluidSystem::SPH_Setup(int n) {
 		m_Vec[SPH_VOLMIN].Set(-30, -30, 0);
 		m_Vec[SPH_VOLMAX].Set(30, 30, 40);
 		// INIT MAX/ INIT MIN governs the two opposing corners of a square drop 
-		m_Vec[SPH_INITMIN].Set(-10, -16, 10);
-		m_Vec[SPH_INITMAX].Set(10, 16, 40);
+		m_Vec[SPH_INITMIN].Set(-5, -5, 10);
+		m_Vec[SPH_INITMAX].Set(5, 5, 20);
 		break;
 	}
 
@@ -111,8 +111,8 @@ void FluidSystem::SPH_CreateExample(int n, int nmax)
 		abs(m_Vec[SPH_INITMIN].z - m_Vec[SPH_INITMAX].z);
 
 	//TODO: weird spawning
-	float ss = pow(m_Param[SPH_PMASS] / m_Param[SPH_RESTDENSITY], 1 / 3.0) / m_Param[SPH_SIMSCALE];
-	//float ss = pow(m_Param[SPH_PMASS] / m_Param[SPH_RESTDENSITY], 1 / 3.0) * 0.87 / m_Param[SPH_SIMSCALE];
+	//float ss = pow(m_Param[SPH_PMASS] / m_Param[SPH_RESTDENSITY], 1 / 3.0) / m_Param[SPH_SIMSCALE];
+	float ss = pow(m_Param[SPH_PMASS] / m_Param[SPH_RESTDENSITY], 1 / 3.0) * 0.87 / m_Param[SPH_SIMSCALE];
 
 	Vector3DF min = m_Vec[SPH_INITMIN];
 	Vector3DF max = m_Vec[SPH_INITMAX];
@@ -123,13 +123,13 @@ void FluidSystem::SPH_CreateExample(int n, int nmax)
 		for (float y = min.y; y <= max.y; y += ss) {
 			for (float x = min.x; x <= max.x; x += ss) {
 				int ndx;
-				if (fluidPs.size() < maxPoints - 2) {
+				//if (fluidPs.size() < maxPoints - 2) {
 					ndx = fluidPs.size();
 					fluidPs.push_back(std::make_unique<Fluid>());
-				}
-				else {
-					ndx = rand() % fluidPs.size();
-				}
+				//}
+				//else {
+				//	ndx = rand() % fluidPs.size();
+				//}
 				fluidPs.at(ndx)->pos.Set(x, y, z);
 				fluidPs.at(ndx)->predictPos.Set(x, y, z);
 				fluidPs.at(ndx)->clr = COLORA((x - min.x) / dx, (y - min.y) / dy, (z - min.z) / dz, 1);
@@ -146,25 +146,25 @@ void FluidSystem::SPH_CreateExample(int n, int nmax)
 
 void FluidSystem::Run()
 {
-	PBF_PredictPositions();
-	Grid_InsertParticles();
-	SPH_FindNeighbors(); //?
-	for (int i = 0; i < 4; ++i) {
-		SPH_ComputeDensity();
-		SPH_ComputeLambda();
-		SPH_ComputeCorrections();
-		SPH_ApplyCorrections();
-	}
-	Advance();
-
-	//m_Param[SPH_PRADIUS] = 0.004;			// m
-	//m_Param[SPH_INTSTIFF] = 1.00;
-	//m_Param[SPH_EXTSTIFF] = 10000.0;
-	//m_Param[SPH_EXTDAMP] = 256.0;
+	//PBF_PredictPositions();
 	//Grid_InsertParticles();
-	//SPH_ComputeDensityOld();
-	//SPH_ComputeForceGridNC();
-	//AdvanceOld();
+	//SPH_FindNeighbors(); //?
+	//for (int i = 0; i < 4; ++i) {
+	//	SPH_ComputeDensity();
+	//	SPH_ComputeLambda();
+	//	SPH_ComputeCorrections();
+	//	SPH_ApplyCorrections();
+	//}
+	//Advance();
+
+	m_Param[SPH_PRADIUS] = 0.004;			// m
+	m_Param[SPH_INTSTIFF] = 1.00;
+	m_Param[SPH_EXTSTIFF] = 10000.0;
+	m_Param[SPH_EXTDAMP] = 256.0;
+	Grid_InsertParticles();
+	SPH_ComputeDensityOld();
+	SPH_ComputeForceGridNC();
+	AdvanceOld();
 }
 
 void FluidSystem::SPH_FindNeighbors() {
@@ -268,11 +268,10 @@ void FluidSystem::SPH_ApplyCorrections() {
 
 void FluidSystem::PBF_PredictPositions() {
 	for (std::unique_ptr<Fluid>& p : fluidPs) {
-
 		Vector3DF force = m_Vec[PLANE_GRAV_DIR];
 		//force *= m_Param[SPH_PMASS]; // m * a
 		force *= m_DT;
-		p->vel += force;
+		//p->vel += force;
 		
 		Vector3DF velDist = p->vel;
 		velDist *= m_DT;
@@ -323,8 +322,6 @@ void FluidSystem::Advance()
 	}
 }
 
-
-
 void FluidSystem::SPH_ComputeForceGridNC()
 {
 	for (int i = 0; i < fluidPs.size(); ++i) {
@@ -355,7 +352,7 @@ void FluidSystem::AdvanceOld() {
 	float ss, radius;
 	float stiff, damp, speed, diff;
 
-	stiff = m_Param[SPH_EXTSTIFF];
+	stiff = 0.1; // vs 10000
 	damp = m_Param[SPH_EXTDAMP];
 	radius = m_Param[SPH_PRADIUS];
 	min = m_Vec[SPH_VOLMIN];
@@ -421,18 +418,18 @@ void FluidSystem::AdvanceOld() {
 		}
 
 		// Plane gravity
-		if (m_Param[PLANE_GRAV] > 0)
-			accel += m_Vec[PLANE_GRAV_DIR];
+		//if (m_Param[PLANE_GRAV] > 0)
+		//	accel += m_Vec[PLANE_GRAV_DIR];
 
-		// Point gravity
-		if (m_Param[POINT_GRAV] > 0) {
-			norm.x = (p->pos.x - m_Vec[POINT_GRAV_POS].x);
-			norm.y = (p->pos.y - m_Vec[POINT_GRAV_POS].y);
-			norm.z = (p->pos.z - m_Vec[POINT_GRAV_POS].z);
-			norm.Normalize();
-			norm *= m_Param[POINT_GRAV];
-			accel -= norm;
-		}
+		//// Point gravity
+		//if (m_Param[POINT_GRAV] > 0) {
+		//	norm.x = (p->pos.x - m_Vec[POINT_GRAV_POS].x);
+		//	norm.y = (p->pos.y - m_Vec[POINT_GRAV_POS].y);
+		//	norm.z = (p->pos.z - m_Vec[POINT_GRAV_POS].z);
+		//	norm.Normalize();
+		//	norm *= m_Param[POINT_GRAV];
+		//	accel -= norm;
+		//}
 
 		// Leapfrog Integration ----------------------------
 		vnext = accel;
