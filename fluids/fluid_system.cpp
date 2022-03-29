@@ -77,8 +77,8 @@ void FluidSystem::SPH_Setup(int n) {
 		m_Vec[SPH_VOLMIN].Set(-30, -30, 0);
 		m_Vec[SPH_VOLMAX].Set(30, 30, 40);
 		// INIT MAX/ INIT MIN governs the two opposing corners of a square drop 
-		m_Vec[SPH_INITMIN].Set(-5, -5, 10);
-		m_Vec[SPH_INITMAX].Set(5, 5, 20);
+		m_Vec[SPH_INITMIN].Set(-20, -26, 10);
+		m_Vec[SPH_INITMAX].Set(20, 26, 40);
 		break;
 	}
 
@@ -123,13 +123,13 @@ void FluidSystem::SPH_CreateExample(int n, int nmax)
 		for (float y = min.y; y <= max.y; y += ss) {
 			for (float x = min.x; x <= max.x; x += ss) {
 				int ndx;
-				//if (fluidPs.size() < maxPoints - 2) {
+				if (fluidPs.size() < maxPoints - 2) {
 					ndx = fluidPs.size();
 					fluidPs.push_back(std::make_unique<Fluid>());
-				//}
-				//else {
-				//	ndx = rand() % fluidPs.size();
-				//}
+				}
+				else {
+					ndx = rand() % fluidPs.size();
+				}
 				fluidPs.at(ndx)->pos.Set(x, y, z);
 				fluidPs.at(ndx)->predictPos.Set(x, y, z);
 				fluidPs.at(ndx)->clr = COLORA((x - min.x) / dx, (y - min.y) / dy, (z - min.z) / dz, 1);
@@ -352,7 +352,7 @@ void FluidSystem::AdvanceOld() {
 	float ss, radius;
 	float stiff, damp, speed, diff;
 
-	stiff = 0.1; // vs 10000
+	stiff = m_Param[SPH_INTSTIFF]; //0.1; // vs 10000
 	damp = m_Param[SPH_EXTDAMP];
 	radius = m_Param[SPH_PRADIUS];
 	min = m_Vec[SPH_VOLMIN];
@@ -417,19 +417,19 @@ void FluidSystem::AdvanceOld() {
 			accel.x += adj * norm.x; accel.y += adj * norm.y; accel.z += adj * norm.z;
 		}
 
-		// Plane gravity
-		//if (m_Param[PLANE_GRAV] > 0)
-		//	accel += m_Vec[PLANE_GRAV_DIR];
+		 //Plane gravity
+		if (m_Param[PLANE_GRAV] > 0)
+			accel += m_Vec[PLANE_GRAV_DIR];
 
-		//// Point gravity
-		//if (m_Param[POINT_GRAV] > 0) {
-		//	norm.x = (p->pos.x - m_Vec[POINT_GRAV_POS].x);
-		//	norm.y = (p->pos.y - m_Vec[POINT_GRAV_POS].y);
-		//	norm.z = (p->pos.z - m_Vec[POINT_GRAV_POS].z);
-		//	norm.Normalize();
-		//	norm *= m_Param[POINT_GRAV];
-		//	accel -= norm;
-		//}
+		// Point gravity
+		if (m_Param[POINT_GRAV] > 0) {
+			norm.x = (p->pos.x - m_Vec[POINT_GRAV_POS].x);
+			norm.y = (p->pos.y - m_Vec[POINT_GRAV_POS].y);
+			norm.z = (p->pos.z - m_Vec[POINT_GRAV_POS].z);
+			norm.Normalize();
+			norm *= m_Param[POINT_GRAV];
+			accel -= norm;
+		}
 
 		// Leapfrog Integration ----------------------------
 		vnext = accel;
