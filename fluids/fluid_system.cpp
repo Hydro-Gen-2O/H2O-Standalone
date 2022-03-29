@@ -49,30 +49,25 @@ void FluidSystem::SPH_DrawDomain()
 }
 
 void FluidSystem::SPH_Setup(int n) {
-	m_Param[MAX_FRAC] = 1.0;
 	m_Param[POINT_GRAV] = 0.0;
 	m_Param[PLANE_GRAV] = 1.0;
+	m_Param[SPH_VISC] = 0.2;			// pascal-second (Pa.s) = 1 kg m^-1 s^-1  (see wikipedia page on viscosity)
 
 	m_Param[BOUND_ZMIN_SLOPE] = 0.0;
 	m_Param[FORCE_XMAX_SIN] = 0.0;
 	m_Param[FORCE_XMIN_SIN] = 0.0;
-	m_Param[SPH_SMOOTHRADIUS] = 0.01;
+	m_Param[SPH_SMOOTHRADIUS] = 0.01; // 0.01;
 
 	m_Vec[POINT_GRAV_POS].Set(0, 0, 50);
 	m_Vec[PLANE_GRAV_DIR].Set(0, 0, -9.8);
 
-	m_Param[SPH_SIMSCALE] = 0.004;			// unit size
-	m_Param[SPH_VISC] = 0.2;			// pascal-second (Pa.s) = 1 kg m^-1 s^-1  (see wikipedia page on viscosity)
-	m_Param[SPH_RESTDENSITY] = 600.0;			// kg / m^3
-	m_Param[SPH_PMASS] = 0.00020543;		// kg
-	m_Param[SPH_PRADIUS] = 0.004;			// m
-	m_Param[SPH_INTSTIFF] = 1.00;
-	m_Param[SPH_EXTSTIFF] = 10000.0;
-	m_Param[SPH_EXTDAMP] = 256.0;
+	m_Param[SPH_SIMSCALE] = 0.004;// 0.004;			// unit size
+	m_Param[SPH_RESTDENSITY] = 1000.0; //600.0;			// kg / m^3
+	m_Param[SPH_PMASS] = 0.00016543;// 0.00020543;		// kg
+
 	m_Param[SPH_LIMIT] = 200.0;			// m / s
 
 	// kernel computation
-	m_Param[SPH_PDIST] = pow(m_Param[SPH_PMASS] / m_Param[SPH_RESTDENSITY], 1 / 3.0);
 	m_Poly6Kern = 315.0f / (64.0f * 3.141592 * pow(m_Param[SPH_SMOOTHRADIUS], 9));	// Wpoly6 kernel (denominator part) - 2003 Muller, p.4
 	m_SpikyKern = -45.0f / (3.141592 * pow(m_Param[SPH_SMOOTHRADIUS], 6));			// grad of spiky (no minus)
 	m_LapKern = 45.0f / (3.141592 * pow(m_Param[SPH_SMOOTHRADIUS], 6));
@@ -82,22 +77,26 @@ void FluidSystem::SPH_Setup(int n) {
 		m_Vec[SPH_VOLMIN].Set(-30, -30, 0);
 		m_Vec[SPH_VOLMAX].Set(30, 30, 40);
 		// INIT MAX/ INIT MIN governs the two opposing corners of a square drop 
-		m_Vec[SPH_INITMIN].Set(-20, -26, 10);
-		m_Vec[SPH_INITMAX].Set(20, 26, 40);
-		break;
-	case 0:		// Wave pool
-		//-- TEST CASE: 2x2x2 grid, 32 particles.  NOTE: Set PRADIUS to 0.0004 to reduce wall influence
-		m_Vec[SPH_VOLMIN].Set(-30, -30, 0);
-		m_Vec[SPH_VOLMAX].Set(30, 30, 40);
-		m_Vec[SPH_INITMIN].Set(-20, -26, 10);
-		m_Vec[SPH_INITMAX].Set(20, 26, 40);
-
-		m_Param[FORCE_XMIN_SIN] = 12.0;
-		m_Param[BOUND_ZMIN_SLOPE] = 0.05;
+		m_Vec[SPH_INITMIN].Set(-10, -16, 10);
+		m_Vec[SPH_INITMAX].Set(10, 16, 40);
 		break;
 	}
 
 	m_DT = 0.003; //  0.001;			// .001 = for point grav
+}
+
+Vector3DF FluidSystem::spikyKern(Vector3DF pos1, Vector3DF pos2) {
+	float dx = (pos1.x - pos2.x) * m_Param[SPH_SIMSCALE];
+	float dy = (pos1.y - pos2.y) * m_Param[SPH_SIMSCALE];
+	float dz = (pos1.z - pos2.z) * m_Param[SPH_SIMSCALE];
+	float dsq = (dx * dx + dy * dy + dz * dz);
+	float lenR = sqrt(dsq);
+
+	Vector3DF r(dx, dy, dz);
+	r *= m_SpikyKern;
+	r *= (m_Param[SPH_SMOOTHRADIUS] - lenR) * (m_Param[SPH_SMOOTHRADIUS] - lenR);
+	r /= lenR;
+	return r;
 }
 
 void FluidSystem::SPH_CreateExample(int n, int nmax)
@@ -106,9 +105,15 @@ void FluidSystem::SPH_CreateExample(int n, int nmax)
 	SPH_Setup(n);
 	fluidPs.clear();
 	maxPoints = nmax;
+	// d = m/v
+	float volume = abs(m_Vec[SPH_INITMIN].x - m_Vec[SPH_INITMAX].x) *
+		abs(m_Vec[SPH_INITMIN].y - m_Vec[SPH_INITMAX].y) *
+		abs(m_Vec[SPH_INITMIN].z - m_Vec[SPH_INITMAX].z);
 
-	float ss = m_Param[SPH_PDIST] * 0.87 / m_Param[SPH_SIMSCALE];
-	//printf ( "Spacing: %f\n", ss);
+	//TODO: weird spawning
+	float ss = pow(m_Param[SPH_PMASS] / m_Param[SPH_RESTDENSITY], 1 / 3.0) / m_Param[SPH_SIMSCALE];
+	//float ss = pow(m_Param[SPH_PMASS] / m_Param[SPH_RESTDENSITY], 1 / 3.0) * 0.87 / m_Param[SPH_SIMSCALE];
+
 	Vector3DF min = m_Vec[SPH_INITMIN];
 	Vector3DF max = m_Vec[SPH_INITMAX];
 	float dx = max.x - min.x;
@@ -126,6 +131,7 @@ void FluidSystem::SPH_CreateExample(int n, int nmax)
 					ndx = rand() % fluidPs.size();
 				}
 				fluidPs.at(ndx)->pos.Set(x, y, z);
+				fluidPs.at(ndx)->predictPos.Set(x, y, z);
 				fluidPs.at(ndx)->clr = COLORA((x - min.x) / dx, (y - min.y) / dy, (z - min.z) / dz, 1);
 			}
 		}
@@ -141,29 +147,31 @@ void FluidSystem::SPH_CreateExample(int n, int nmax)
 void FluidSystem::Run()
 {
 	PBF_PredictPositions();
-
-	for (int i = 0; i < 3; ++i) {
-		Grid_InsertParticles();
-		SPH_ComputeDensity(); // does the pressure comp for forces
+	Grid_InsertParticles();
+	SPH_FindNeighbors(); //?
+	for (int i = 0; i < 4; ++i) {
+		SPH_ComputeDensity();
 		SPH_ComputeLambda();
 		SPH_ComputeCorrections();
+		SPH_ApplyCorrections();
 	}
 	Advance();
 
-
+	//m_Param[SPH_PRADIUS] = 0.004;			// m
+	//m_Param[SPH_INTSTIFF] = 1.00;
+	//m_Param[SPH_EXTSTIFF] = 10000.0;
+	//m_Param[SPH_EXTDAMP] = 256.0;
 	//Grid_InsertParticles();
 	//SPH_ComputeDensityOld();
 	//SPH_ComputeForceGridNC();
 	//AdvanceOld();
 }
 
-void FluidSystem::SPH_ComputeDensity()
-{
+void FluidSystem::SPH_FindNeighbors() {
 	for (int i = 0; i < fluidPs.size(); ++i) {
 		std::unique_ptr<Fluid>& p = fluidPs.at(i);
 		float sum = 0.0;
 		m_NC[i] = 0;
-		p->gradient.Set(0.0, 0.0, 0.0);
 		Grid_FindCells(p->predictPos, m_Param[SPH_SMOOTHRADIUS] / m_Param[SPH_SIMSCALE]);
 		for (int cell = 0; cell < 8; cell++) {
 			if (m_GridCell[cell] != -1) {
@@ -175,13 +183,10 @@ void FluidSystem::SPH_ComputeDensity()
 					float dy = (p->predictPos.y - pcurr->predictPos.y) * m_Param[SPH_SIMSCALE];
 					float dz = (p->predictPos.z - pcurr->predictPos.z) * m_Param[SPH_SIMSCALE];
 					float dsq = (dx * dx + dy * dy + dz * dz);
-					float lenR = sqrt(dsq);
-					if (lenR < m_Param[SPH_SMOOTHRADIUS]) {
-						float c = m_Param[SPH_SMOOTHRADIUS] * m_Param[SPH_SMOOTHRADIUS] - dsq;
-						sum += c * c * c;
+					if (dsq < m_Param[SPH_SMOOTHRADIUS] * m_Param[SPH_SMOOTHRADIUS]) {
 						if (m_NC[i] < MAX_NEIGHBOR) {
 							m_Neighbor[i][m_NC[i]] = pndx;
-							m_NDist[i][m_NC[i]] = lenR;
+							m_NDist[i][m_NC[i]] = sqrt(dsq);
 							m_NC[i]++;
 						}
 					}
@@ -190,8 +195,24 @@ void FluidSystem::SPH_ComputeDensity()
 			}
 			m_GridCell[cell] = -1;
 		}
+	}
+}
+
+void FluidSystem::SPH_ComputeDensity()
+{
+	for (int i = 0; i < fluidPs.size(); ++i) {
+		std::unique_ptr<Fluid>& p = fluidPs.at(i);
+		float sum = 0.0;
+		for (int j = 0; j < m_NC[i]; j++) {
+			std::unique_ptr<Fluid>& pcurr = fluidPs.at(m_Neighbor[i][j]);
+			float dx = (p->predictPos.x - pcurr->predictPos.x) * m_Param[SPH_SIMSCALE];	// dist in cm
+			float dy = (p->predictPos.y - pcurr->predictPos.y) * m_Param[SPH_SIMSCALE];
+			float dz = (p->predictPos.z - pcurr->predictPos.z) * m_Param[SPH_SIMSCALE];
+			float dsq = (dx * dx + dy * dy + dz * dz);
+			float c = m_Param[SPH_SMOOTHRADIUS] * m_Param[SPH_SMOOTHRADIUS] - dsq;
+			sum += c * c * c;
+		}
 		p->density = sum * m_Param[SPH_PMASS] * m_Poly6Kern;
-		p->pressure = (p->density - m_Param[SPH_RESTDENSITY]) * m_Param[SPH_INTSTIFF];
 	}
 }
 
@@ -206,28 +227,18 @@ void FluidSystem::SPH_ComputeLambda() {
 
 		for (int j = 0; j < m_NC[i]; j++) {
 			std::unique_ptr<Fluid>& pcurr = fluidPs.at(m_Neighbor[i][j]);
-
-			float dx = (p->predictPos.x - pcurr->predictPos.x) * m_Param[SPH_SIMSCALE];	// dist in cm
-			float dy = (p->predictPos.y - pcurr->predictPos.y) * m_Param[SPH_SIMSCALE];
-			float dz = (p->predictPos.z - pcurr->predictPos.z) * m_Param[SPH_SIMSCALE];
-			float dsq = (dx * dx + dy * dy + dz * dz);
-			float lenR = sqrt(dsq);
-
 			//gradient calculation
-			if (lenR != 0 && lenR < m_Param[SPH_SMOOTHRADIUS]) {
-				Vector3DF r(dx, dy, dz);
-				r *= m_SpikyKern;
-				r *= (m_Param[SPH_SMOOTHRADIUS] - lenR) * (m_Param[SPH_SMOOTHRADIUS] - lenR);
-				r /= lenR;
-				r /= m_Param[SPH_RESTDENSITY];
-				r *= m_Param[SPH_SIMSCALE];
+			Vector3DF r = spikyKern(p->predictPos, pcurr->predictPos);
+			r /= m_Param[SPH_RESTDENSITY];
+			//NOTE: tunable here
+			//r *= m_Param[SPH_PMASS]; // ? 
+			r *= m_Param[SPH_SIMSCALE]; // ? helps for some reason
 
-				sumGradients += r.Length() * r.Length();
-				gradI += r; // -= r; ??
-			}
+			sumGradients += r.Length() * r.Length();
+			gradI += r; // -= r; ??
 		}
 		sumGradients += gradI.Length() * gradI.Length();
-		p->lambda = -constraint / (sumGradients + EPSILON); // maybe + 500 or so
+		p->lambda = -constraint / (sumGradients + 600); // maybe + 500 or so
 	}
 }
 
@@ -240,21 +251,79 @@ void FluidSystem::SPH_ComputeCorrections() {
 
 		for (int j = 0; j < m_NC[i]; j++) {
 			std::unique_ptr<Fluid>& pcurr = fluidPs.at(m_Neighbor[i][j]);
-			float lenR = m_NDist[i][j];
-			float dx = (p->predictPos.x - pcurr->predictPos.x) * m_Param[SPH_SIMSCALE];
-			float dy = (p->predictPos.y - pcurr->predictPos.y) * m_Param[SPH_SIMSCALE];
-			float dz = (p->predictPos.z - pcurr->predictPos.z) * m_Param[SPH_SIMSCALE];
-
-			Vector3DF r(dx, dy, dz);
-			r *= m_SpikyKern;
-			r *= (m_Param[SPH_SMOOTHRADIUS] - lenR) * (m_Param[SPH_SMOOTHRADIUS] - lenR);
-			r /= lenR;
-			r *= (p->lambda + pcurr->lambda);
+			Vector3DF r = spikyKern(p->predictPos, pcurr->predictPos);
 			r /= m_Param[SPH_RESTDENSITY];
+			r *= (p->lambda + pcurr->lambda); // scorr here
+
 			p->deltaPos += r;
 		}
 	}
 }
+
+void FluidSystem::SPH_ApplyCorrections() {
+	for (std::unique_ptr<Fluid>& p : fluidPs) {
+		p->predictPos += p->deltaPos;
+	}
+}
+
+void FluidSystem::PBF_PredictPositions() {
+	for (std::unique_ptr<Fluid>& p : fluidPs) {
+
+		Vector3DF force = m_Vec[PLANE_GRAV_DIR];
+		//force *= m_Param[SPH_PMASS]; // m * a
+		force *= m_DT;
+		p->vel += force;
+		
+		Vector3DF velDist = p->vel;
+		velDist *= m_DT;
+
+		//NOTE: tunable here
+		velDist /= m_Param[SPH_SIMSCALE]; // ?? not sure if necessary
+
+		p->predictPos = p->pos;
+		p->predictPos += velDist;
+		//std::cout << "veldist: " << velDist.x << " " << velDist.y << " " << velDist.z << std::endl;
+		
+		int bound = 40;
+		if (p->predictPos.y < -bound) { p->vel.y = 0.0; p->predictPos.y = -bound + 0.01; }
+		if (p->predictPos.y > bound) { p->vel.y = 0.0; p->predictPos.y = bound - 0.01; }
+
+		if (p->predictPos.z < 0) { p->vel.z = 0.0; p->predictPos.z = 0.01; }
+		if (p->predictPos.z > bound) { p->vel.z = 0.0; p->predictPos.z = bound - 0.01; }
+
+		if (p->predictPos.x < -bound) { p->vel.x = 0.0; p->predictPos.x = -bound + 0.01; }
+		if (p->predictPos.x > bound) { p->vel.x = 0.0; p->predictPos.x = bound - 0.01; }
+	}
+}
+
+void FluidSystem::Advance()
+{
+	for (std::unique_ptr<Fluid>& p : fluidPs) {
+		//std::cout << "p pos: " << p->pos.x << " " << p->pos.y << " " << p->pos.z << std::endl;
+		//std::cout << "p pred: " << p->predictPos.x << " " << p->predictPos.y << " " << p->predictPos.z << std::endl;
+		//std::cout << "p delP: " << p->deltaPos.x << " " << p->deltaPos.y << " " << p->deltaPos.z << std::endl;
+		//std::cout << "p vel: " << p->vel.x << " " << p->vel.y << " " << p->vel.z << std::endl;
+		//std::cout << "p dens: " << p->density << std::endl;
+		//std::cout << "p lamb: " << p->lambda << std::endl << std::endl;
+
+		p->vel = p->predictPos;
+		p->vel -= p->pos;
+		p->vel /= m_DT;
+		p->vel *= m_Param[SPH_SIMSCALE]; // ?? not sure if necesary
+		
+		// limit velocity ? 
+		//if (p->vel.Length() > m_Param[SPH_LIMIT]) {
+		//	p->vel = m_Param[SPH_LIMIT];
+		//}
+
+		// done
+
+		//// apply vorticity confinement here?
+		p->pos = p->predictPos;
+	}
+}
+
+
 
 void FluidSystem::SPH_ComputeForceGridNC()
 {
@@ -274,72 +343,6 @@ void FluidSystem::SPH_ComputeForceGridNC()
 			p->sph_force.y += (pterm * dy + vterm * (pcurr->vel_eval.y - p->vel_eval.y)) * dterm;
 			p->sph_force.z += (pterm * dz + vterm * (pcurr->vel_eval.z - p->vel_eval.z)) * dterm;
 		}
-	}
-}
-
-void FluidSystem::PBF_PredictPositions() {
-	for (int i = 0; i < fluidPs.size(); ++i) {
-		std::unique_ptr<Fluid>& p = fluidPs.at(i);
-
-		Vector3DF force = m_Vec[PLANE_GRAV_DIR];
-		force *= m_Param[SPH_PMASS]; // m * a
-		force *= m_DT;
-
-		p->vel += force;
-		p->predictPos = p->vel;
-		p->predictPos *= m_DT;
-		p->predictPos /= m_Param[SPH_SIMSCALE]; // ??
-		p->predictPos += p->pos;
-
-		//std::cout << "p before pos: " << p->pos.x << " " << p->pos.y << " " << p->pos.z << std::endl;
-		//std::cout << "p before pred: " << p->predictPos.x << " " << p->predictPos.y << " " << p->predictPos.z << std::endl;
-		//std::cout << "p before vel: " << p->vel.x << " " << p->vel.y << " " << p->vel.z << std::endl;
-
-		int bound = 1000;
-		//if (p->predictPos.y < 0) { p->vel.y = 0.0; p->predictPos.y = 0.01; }
-		if (p->predictPos.y > bound) { p->vel.y = 0.0; p->predictPos.y = bound - 0.01; }
-
-		if (p->predictPos.z < 0) { p->vel.z = 0.0; p->predictPos.z = 0.01; }
-		if (p->predictPos.z > bound) { p->vel.z = 0.0; p->predictPos.z = bound - 0.01; }
-
-		//if (p->predictPos.x < 0) { p->vel.x = 0.0; p->predictPos.x = 0.01; }
-		if (p->predictPos.x > bound) { p->vel.x = 0.0; p->predictPos.x = bound - 0.01; }
-
-		//std::cout << "p pos: " << p->pos.x << " " << p->pos.y << " " << p->pos.z << std::endl;
-		//std::cout << "p pred: " << p->predictPos.x << " " << p->predictPos.y << " " << p->predictPos.z << std::endl;
-		//std::cout << "p delP: " << p->deltaPos.x << " " << p->deltaPos.y << " " << p->deltaPos.z << std::endl;
-		//std::cout << "p vel: " << p->vel.x << " " << p->vel.y << " " << p->vel.z << std::endl;
-		//std::cout << "p grad: " << p->gradient.x << " " << p->gradient.y << " " << p->gradient.z << std::endl;
-		//std::cout << "p dens: " << p->density << std::endl;
-		//std::cout << "p lamb: " << p->lambda << std::endl << std::endl;
-	}
-}
-
-void FluidSystem::Advance()
-{
-	for (int i = 0; i < fluidPs.size(); ++i) {
-		std::unique_ptr<Fluid>& p = fluidPs.at(i);
-		//std::cout << "p pos: " << p->pos.x << " " << p->pos.y << " " << p->pos.z << std::endl;
-		//std::cout << "p pred: " << p->predictPos.x << " " << p->predictPos.y << " " << p->predictPos.z << std::endl;
-		//std::cout << "p delP: " << p->deltaPos.x << " " << p->deltaPos.y << " " << p->deltaPos.z << std::endl;
-		//std::cout << "p vel: " << p->vel.x << " " << p->vel.y << " " << p->vel.z << std::endl;
-		//std::cout << "p grad: " << p->gradient.x << " " << p->gradient.y << " " << p->gradient.z << std::endl;
-		//std::cout << "p dens: " << p->density << std::endl;
-		//std::cout << "p lamb: " << p->lambda << std::endl << std::endl;
-		p->predictPos += p->deltaPos;
-
-		p->vel = p->predictPos;
-		p->vel -= p->pos;
-		p->vel /= m_DT;
-		p->vel *= m_Param[SPH_SIMSCALE]; // ??
-		
-		// limit velocity ? 
-		if (p->vel.Length() > m_Param[SPH_LIMIT]) {
-			p->vel = m_Param[SPH_LIMIT];
-		}
-
-		//// apply vorticity confinement here?
-		p->pos = p->predictPos;
 	}
 }
 
@@ -463,7 +466,6 @@ void FluidSystem::SPH_ComputeDensityOld()
 		std::unique_ptr<Fluid>& p = fluidPs.at(i);
 		float sum = 0.0;
 		m_NC[i] = 0;
-		p->gradient.Set(0.0, 0.0, 0.0);
 		Grid_FindCells(p->pos, m_Param[SPH_SMOOTHRADIUS] / m_Param[SPH_SIMSCALE]);
 		for (int cell = 0; cell < 8; cell++) {
 			if (m_GridCell[cell] != -1) {
@@ -476,7 +478,7 @@ void FluidSystem::SPH_ComputeDensityOld()
 					float dz = (p->pos.z - pcurr->pos.z) * m_Param[SPH_SIMSCALE];
 					float dsq = (dx * dx + dy * dy + dz * dz);
 					float lenR = sqrt(dsq);
-					if (lenR < m_Param[SPH_SMOOTHRADIUS]) {
+					if (lenR != 0 && lenR < m_Param[SPH_SMOOTHRADIUS]) {
 						float c = m_Param[SPH_SMOOTHRADIUS] * m_Param[SPH_SMOOTHRADIUS] - dsq;
 						sum += c * c * c;
 						if (m_NC[i] < MAX_NEIGHBOR) {

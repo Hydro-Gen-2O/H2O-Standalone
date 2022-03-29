@@ -77,9 +77,14 @@
 
 		void PBF_PredictPositions();
 
+		Vector3DF spikyKern(Vector3DF pos1, Vector3DF pos2);
+
+		void SPH_FindNeighbors();
 		void SPH_ComputeDensity();
 		void SPH_ComputeLambda();
 		void SPH_ComputeCorrections();
+		void SPH_ApplyCorrections();
+
 		void SPH_ComputeForceGridNC ();				// O(cn) - neighbor table
 
 		void SPH_ComputeVorticityAndViscosity();

@@ -48,7 +48,7 @@
 		float			density;	
 		Vector3DF		sph_force;
 
-		Vector3DF gradient;
+		//Vector3DF gradient;
 		float lambda;
 		Vector3DF deltaPos;
 		Vector3DF vorticity;
