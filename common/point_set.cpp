@@ -32,16 +32,6 @@ PointSet::PointSet ()
 
 void PointSet::Reset ()
 {
-	// Reset number of particles
-//	ResetBuffer ( 0 );	
-
-	m_Time = 0;
-	m_DT = 0.1;
-	m_Param[POINT_GRAV] = 100.0;
-	m_Param[PLANE_GRAV] = 0.0;
-	
-	m_Vec[POINT_GRAV_POS].Set(0, 0, 50.0);
-	m_Vec[PLANE_GRAV_DIR].Set(0, 0, -9.8);
 }
 
 
