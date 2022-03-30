@@ -157,20 +157,20 @@ void FluidSystem::SPH_CreateExample(int n, int nmax)
 
 void FluidSystem::Run()
 {
-	//PBF_PredictPositions();
-	//SPH_FindNeighbors(true); //?
-	//for (int i = 0; i < 4; ++i) {
-	//	SPH_ComputeDensity();
-	//	SPH_ComputeLambda();
-	//	SPH_ComputeCorrections();
-	//	SPH_ApplyCorrections();
-	//}
-	//Advance();
+	PBF_PredictPositions();
+	SPH_FindNeighbors(true); //?
+	for (int i = 0; i < 4; ++i) {
+		SPH_ComputeDensity();
+		SPH_ComputeLambda();
+		SPH_ComputeCorrections();
+		SPH_ApplyCorrections();
+	}
+	Advance();
 
-	SPH_FindNeighbors(false);
-	SPH_ComputeDensity();
-	SPH_ComputeForceGridNC();
-	AdvanceOld();
+	//SPH_FindNeighbors(false);
+	//SPH_ComputeDensity();
+	//SPH_ComputeForceGridNC();
+	//AdvanceOld();
 }
 
 void FluidSystem::PBF_PredictPositions() {
@@ -188,7 +188,9 @@ void FluidSystem::PBF_PredictPositions() {
 		//}
 
 		Vector3DF velDist = p->vel;
-		velDist *= m_DT; // / m_Param[SPH_SIMSCALE]; // ?????????
+		velDist *= m_DT;
+		// /; // ?????????
+		//velDist /= m_Param[SPH_SIMSCALE];
 		p->predictPos = p->pos;
 		p->predictPos += velDist;
 	}
@@ -218,8 +220,7 @@ void FluidSystem::SPH_FindNeighbors(bool PBF) {
 						dx = (p->predictPos.x - pcurr->predictPos.x) * m_Param[SPH_SIMSCALE];	// dist in cm
 						dy = (p->predictPos.y - pcurr->predictPos.y) * m_Param[SPH_SIMSCALE];
 						dz = (p->predictPos.z - pcurr->predictPos.z) * m_Param[SPH_SIMSCALE];
-					}
-					else {
+					} else {
 						dx = (p->pos.x - pcurr->pos.x) * m_Param[SPH_SIMSCALE];	// dist in cm
 						dy = (p->pos.y - pcurr->pos.y) * m_Param[SPH_SIMSCALE];
 						dz = (p->pos.z - pcurr->pos.z) * m_Param[SPH_SIMSCALE];
@@ -311,13 +312,12 @@ void FluidSystem::SPH_ApplyCorrections() {
 		if (p->predictPos.y < m_Vec[SPH_VOLMIN].y) { p->vel.y = 0.0; p->predictPos.y = m_Vec[SPH_VOLMIN].y + 0.01; }
 		if (p->predictPos.y > m_Vec[SPH_VOLMAX].y) { p->vel.y = 0.0; p->predictPos.y = m_Vec[SPH_VOLMAX].y - 0.01; }
 
-		if (p->predictPos.z < 0) { p->vel.z = 0.0; p->predictPos.z = 0.01; }
+		if (p->predictPos.z < m_Vec[SPH_VOLMIN].z) { p->vel.z = 0.0; p->predictPos.z = m_Vec[SPH_VOLMIN].z + 0.01; }
 		if (p->predictPos.z > m_Vec[SPH_VOLMAX].z) { p->vel.z = 0.0; p->predictPos.z = m_Vec[SPH_VOLMAX].z - 0.01; }
 
 		if (p->predictPos.x < m_Vec[SPH_VOLMIN].x) { p->vel.x = 0.0; p->predictPos.x = m_Vec[SPH_VOLMIN].x + 0.01; }
 		if (p->predictPos.x > m_Vec[SPH_VOLMAX].x) { p->vel.x = 0.0; p->predictPos.x = m_Vec[SPH_VOLMAX].x - 0.01; }
 	}
-
 }
 
 void FluidSystem::Advance() {
@@ -333,7 +333,7 @@ void FluidSystem::Advance() {
 		p->vel -= p->pos;
 		p->vel /= m_DT;
 		//p->vel *= m_Param[SPH_SIMSCALE]; // ?? not sure if necesary
-
+		//p->vel /= m_Param[SPH_SIMSCALE];
 		// done
 
 		//// apply vorticity confinement here?
@@ -393,49 +393,49 @@ void FluidSystem::AdvanceOld() {
 
 		// Boundary Conditions
 		// Z-axis walls (floor)
-		//diff = 2 * radius - (p->pos.z - min.z - (p->pos.x - m_Vec[SPH_VOLMIN].x) * m_Param[BOUND_ZMIN_SLOPE]) * ss;
-		//if (diff > EPSILON) {
-		//	norm.Set(-m_Param[BOUND_ZMIN_SLOPE], 0, 1.0 - m_Param[BOUND_ZMIN_SLOPE]);
-		//	adj = stiff * diff - damp * norm.Dot(p->vel_eval);
-		//	accel.x += adj * norm.x; accel.y += adj * norm.y; accel.z += adj * norm.z;
-		//}
+		diff = 2 * radius - (p->pos.z - min.z - (p->pos.x - m_Vec[SPH_VOLMIN].x) * m_Param[BOUND_ZMIN_SLOPE]) * ss;
+		if (diff > EPSILON) {
+			norm.Set(-m_Param[BOUND_ZMIN_SLOPE], 0, 1.0 - m_Param[BOUND_ZMIN_SLOPE]);
+			adj = stiff * diff - damp * norm.Dot(p->vel_eval);
+			accel.x += adj * norm.x; accel.y += adj * norm.y; accel.z += adj * norm.z;
+		}
 
-		//diff = 2 * radius - (max.z - p->pos.z) * ss;
-		//if (diff > EPSILON) {
-		//	norm.Set(0, 0, -1);
-		//	adj = stiff * diff - damp * norm.Dot(p->vel_eval);
-		//	accel.x += adj * norm.x; accel.y += adj * norm.y; accel.z += adj * norm.z;
-		//}
+		diff = 2 * radius - (max.z - p->pos.z) * ss;
+		if (diff > EPSILON) {
+			norm.Set(0, 0, -1);
+			adj = stiff * diff - damp * norm.Dot(p->vel_eval);
+			accel.x += adj * norm.x; accel.y += adj * norm.y; accel.z += adj * norm.z;
+		}
 
-		//// X-axis walls
-		//diff = 2 * radius - (p->pos.x - min.x + (sin(m_Time * 10.0) - 1 + (p->pos.y * 0.025) * 0.25) * m_Param[FORCE_XMIN_SIN]) * ss;
-		////diff = 2 * radius - ( p->pos.x - min.x + (sin(m_Time*10.0)-1) * m_Param[FORCE_XMIN_SIN] )*ss;	
-		//if (diff > EPSILON) {
-		//	norm.Set(1.0, 0, 0);
-		//	adj = (m_Param[FORCE_XMIN_SIN] + 1) * stiff * diff - damp * norm.Dot(p->vel_eval);
-		//	accel.x += adj * norm.x; accel.y += adj * norm.y; accel.z += adj * norm.z;
-		//}
+		// X-axis walls
+		diff = 2 * radius - (p->pos.x - min.x + (sin(m_Time * 10.0) - 1 + (p->pos.y * 0.025) * 0.25) * m_Param[FORCE_XMIN_SIN]) * ss;
+		//diff = 2 * radius - ( p->pos.x - min.x + (sin(m_Time*10.0)-1) * m_Param[FORCE_XMIN_SIN] )*ss;	
+		if (diff > EPSILON) {
+			norm.Set(1.0, 0, 0);
+			adj = (m_Param[FORCE_XMIN_SIN] + 1) * stiff * diff - damp * norm.Dot(p->vel_eval);
+			accel.x += adj * norm.x; accel.y += adj * norm.y; accel.z += adj * norm.z;
+		}
 
-		//diff = 2 * radius - (max.x - p->pos.x + (sin(m_Time * 10.0) - 1) * m_Param[FORCE_XMAX_SIN]) * ss;
-		//if (diff > EPSILON) {
-		//	norm.Set(-1, 0, 0);
-		//	adj = (m_Param[FORCE_XMAX_SIN] + 1) * stiff * diff - damp * norm.Dot(p->vel_eval);
-		//	accel.x += adj * norm.x; accel.y += adj * norm.y; accel.z += adj * norm.z;
-		//}
+		diff = 2 * radius - (max.x - p->pos.x + (sin(m_Time * 10.0) - 1) * m_Param[FORCE_XMAX_SIN]) * ss;
+		if (diff > EPSILON) {
+			norm.Set(-1, 0, 0);
+			adj = (m_Param[FORCE_XMAX_SIN] + 1) * stiff * diff - damp * norm.Dot(p->vel_eval);
+			accel.x += adj * norm.x; accel.y += adj * norm.y; accel.z += adj * norm.z;
+		}
 
-		//// Y-axis walls
-		//diff = 2 * radius - (p->pos.y - min.y) * ss;
-		//if (diff > EPSILON) {
-		//	norm.Set(0, 1, 0);
-		//	adj = stiff * diff - damp * norm.Dot(p->vel_eval);
-		//	accel.x += adj * norm.x; accel.y += adj * norm.y; accel.z += adj * norm.z;
-		//}
-		//diff = 2 * radius - (max.y - p->pos.y) * ss;
-		//if (diff > EPSILON) {
-		//	norm.Set(0, -1, 0);
-		//	adj = stiff * diff - damp * norm.Dot(p->vel_eval);
-		//	accel.x += adj * norm.x; accel.y += adj * norm.y; accel.z += adj * norm.z;
-		//}
+		// Y-axis walls
+		diff = 2 * radius - (p->pos.y - min.y) * ss;
+		if (diff > EPSILON) {
+			norm.Set(0, 1, 0);
+			adj = stiff * diff - damp * norm.Dot(p->vel_eval);
+			accel.x += adj * norm.x; accel.y += adj * norm.y; accel.z += adj * norm.z;
+		}
+		diff = 2 * radius - (max.y - p->pos.y) * ss;
+		if (diff > EPSILON) {
+			norm.Set(0, -1, 0);
+			adj = stiff * diff - damp * norm.Dot(p->vel_eval);
+			accel.x += adj * norm.x; accel.y += adj * norm.y; accel.z += adj * norm.z;
+		}
 
 		// Plane gravity
 		if (m_Param[PLANE_GRAV] > 0)
@@ -452,17 +452,12 @@ void FluidSystem::AdvanceOld() {
 		vnext *= m_DT / ss;
 		p->pos += vnext;		// p(t+1) = p(t) + v(t+1/2) dt
 
-		if (m_Param[CLR_MODE] == 1.0) {
-			adj = fabs(vnext.x) + fabs(vnext.y) + fabs(vnext.z) / 7000.0;
-			adj = (adj > 1.0) ? 1.0 : adj;
-			p->clr = COLORA(0, adj, adj, 1);
-		}
-		if (m_Param[CLR_MODE] == 2.0) {
-			float v = 0.5 + (p->pressure / 1500.0);
-			if (v < 0.1) v = 0.1;
-			if (v > 1.0) v = 1.0;
-			p->clr = COLORA(v, 1 - v, 0, 1);
-		}
+		//if (p->pos.y < m_Vec[SPH_VOLMIN].y) { p->vel.y = 0.0; p->pos.y = m_Vec[SPH_VOLMIN].y + 0.01; }
+		//if (p->pos.y > m_Vec[SPH_VOLMAX].y) { p->vel.y = 0.0; p->pos.y = m_Vec[SPH_VOLMAX].y - 0.01; }
+		//if (p->pos.z < 0) { p->vel.z = 0.0; p->pos.z = 0.01; }
+		//if (p->pos.z > m_Vec[SPH_VOLMAX].z) { p->vel.z = 0.0; p->pos.z = m_Vec[SPH_VOLMAX].z - 0.01; }
+		//if (p->pos.x < m_Vec[SPH_VOLMIN].x) { p->vel.x = 0.0; p->pos.x = m_Vec[SPH_VOLMIN].x + 0.01; }
+		//if (p->pos.x > m_Vec[SPH_VOLMAX].x) { p->vel.x = 0.0; p->pos.x = m_Vec[SPH_VOLMAX].x - 0.01; }
 	}
 	m_Time += m_DT;
 }
