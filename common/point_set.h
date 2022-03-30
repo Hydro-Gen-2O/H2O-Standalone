@@ -27,7 +27,6 @@
 	#include <vector>
 	
 	#include "common_defs.h"
-	#include "vector.h"
 	#include "fluid.h"
 	
 	#define MAX_NEIGHBOR		80
@@ -50,7 +49,6 @@
 
 		// Point Sets
 		virtual void Draw ( float* view_mat, float rad );		
-		virtual void Reset ();
 		
 		// Parameters			
 		void SetParam (int p, float v )		{ m_Param[p] = v; }
@@ -58,31 +56,31 @@
 		float GetParam ( int p )			{ return (float) m_Param[p]; }
 
 		// Spatial Subdivision
-		void Grid_Setup ( Vector3DF min, Vector3DF max, float sim_scale, float cell_size, float border );		
+		void Grid_Setup (glm::vec3 min, glm::vec3 max, float sim_scale, float cell_size, float border );
 		void Grid_InsertParticles ();	
-		void Grid_FindCells ( Vector3DF p, float radius );
+		void Grid_FindCells (glm::vec3 p, float radius );
 
 	protected:
 		std::vector<std::unique_ptr<Fluid>> fluidPs;
 		int maxPoints = 0;
 
 		// Parameters
-		double						m_Param [ MAX_PARAM ];			// see defines above
-		Vector3DF					m_Vec[MAX_PARAM];
+		float						m_Param [ MAX_PARAM ];			// see defines above
+		glm::vec3					m_Vec[MAX_PARAM];
 		
 		// Particle System
-		double						m_DT;
+		float						m_DT;
 		double						m_Time;
 
 		// Spatial Grid
 		std::vector< int >			m_Grid;
 		std::vector< int >			m_GridCnt;
 		int							m_GridTotal;			// total # cells
-		Vector3DF					m_GridMin;				// volume of grid (may not match domain volume exactly)
-		Vector3DF					m_GridMax;
-		Vector3DF					m_GridRes;				// resolution in each axis
-		Vector3DF					m_GridSize;				// physical size in each axis
-		Vector3DF					m_GridDelta;
+		glm::vec3					m_GridMin;				// volume of grid (may not match domain volume exactly)
+		glm::vec3					m_GridMax;
+		glm::vec3					m_GridRes;				// resolution in each axis
+		glm::vec3					m_GridSize;				// physical size in each axis
+		glm::vec3					m_GridDelta;
 		int							m_GridCell[27];
 
 		// Neighbor Table

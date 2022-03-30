@@ -40,7 +40,7 @@ FluidSystem			psys;
 float window_width  = 1024;
 float window_height = 768;
 
-Vector3DF	cam_from, cam_angs, cam_to;			// Camera stuff
+glm::vec3	cam_from, cam_angs, cam_to;			// Camera stuff
 float		cam_fov;	
 
 int		psys_demo = -1; // CHANGE TO CHANGE  SIM TYPE

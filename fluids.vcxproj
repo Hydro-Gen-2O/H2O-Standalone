@@ -107,10 +107,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="common\gl_helper.cpp" />
-    <ClCompile Include="common\matrix.cpp" />
-    <ClCompile Include="common\mdebug.cpp" />
     <ClCompile Include="common\point_set.cpp" />
-    <ClCompile Include="common\vector.cpp" />
     <ClCompile Include="fluids\fluid.cpp" />
     <ClCompile Include="fluids\fluid_system.cpp" />
     <ClCompile Include="main.cpp" />
@@ -118,17 +115,9 @@
   <ItemGroup>
     <ClInclude Include="common\common_defs.h" />
     <ClInclude Include="common\gl_helper.h" />
-    <ClInclude Include="common\matrix-inline.h" />
-    <ClInclude Include="common\matrix.h" />
-    <ClInclude Include="common\mdebug.h" />
     <ClInclude Include="common\point_set.h" />
-    <ClInclude Include="common\vector.h" />
     <ClInclude Include="fluids\fluid.h" />
     <ClInclude Include="fluids\fluid_system.h" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="common\matrix.cci" />
-    <None Include="common\vector.cci" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

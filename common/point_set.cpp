@@ -21,17 +21,11 @@
 */
 
 #include "gl_helper.h"
-
+#include <glm/glm.hpp>
 #include "point_set.h"
 
 PointSet::PointSet ()
 {	
-	m_GridRes.Set ( 0, 0, 0 );
-	Reset ();
-}
-
-void PointSet::Reset ()
-{
 }
 
 
@@ -63,7 +57,7 @@ void PointSet::Draw ( float* view_mat, float rad )
 // Ideal grid cell size (gs) = 2 * smoothing radius = 0.02*2 = 0.04
 // Ideal domain size = k*gs/d = k*0.02*2/0.005 = k*8 = {8, 16, 24, 32, 40, 48, ..}
 //    (k = number of cells, gs = cell size, d = simulation scale)
-void PointSet::Grid_Setup ( Vector3DF min, Vector3DF max, float sim_scale, float cell_size, float border )
+void PointSet::Grid_Setup (glm::vec3 min, glm::vec3 max, float sim_scale, float cell_size, float border )
 {
 	float world_cellsize = cell_size / sim_scale;
 	m_Grid.clear();
@@ -110,9 +104,9 @@ void PointSet::Grid_InsertParticles ()
 	}
 }
 
-void PointSet::Grid_FindCells ( Vector3DF p, float radius )
+void PointSet::Grid_FindCells (glm::vec3 p, float radius )
 {
-	Vector3DI sph_min;
+	glm::vec3 sph_min;
 	// Compute sphere range
 	sph_min.x = (int)((-radius + p.x - m_GridMin.x) * m_GridDelta.x);
 	sph_min.y = (int)((-radius + p.y - m_GridMin.y) * m_GridDelta.y);

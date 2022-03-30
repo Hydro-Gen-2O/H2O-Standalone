@@ -22,38 +22,37 @@
 
 #ifndef DEF_FLUID
 	#define DEF_FLUID
-	
-	#include "vector.h"
 
+	#include <glm/glm.hpp>
 	#include "common_defs.h"
 
 	class Fluid {
 	public:
 		Fluid() {
-			sph_force.Set(0, 0, 0);
-			vel.Set(0, 0, 0);
-			vel_eval.Set(0, 0, 0);
-			gradient.Set(0, 0, 0);
-			deltaPos.Set(0, 0, 0);
+			sph_force = glm::vec3(0, 0, 0);
+			vel = glm::vec3(0, 0, 0);
+			vel_eval = glm::vec3(0, 0, 0);
+			gradient = glm::vec3(0, 0, 0);
+			deltaPos = glm::vec3(0, 0, 0);
 			next = 0x0;
 			pressure = 0;
 			density = 0;
 		}
-		Vector3DF		predictPos;
-		Vector3DF		pos;			// Basic particle (must match Particle class)
+		glm::vec3		predictPos;
+		glm::vec3		pos;			// Basic particle (must match Particle class)
 		DWORD			clr;
 		int				next;
-		Vector3DF		vel;			
-		Vector3DF		vel_eval;
+		glm::vec3		vel;
+		glm::vec3		vel_eval;
 
 		float			pressure;		// Smoothed Particle Hydrodynamics
 		float			density;	
-		Vector3DF		sph_force;
+		glm::vec3		sph_force;
 
-		Vector3DF gradient;
+		glm::vec3 gradient;
 		float lambda;
-		Vector3DF deltaPos;
-		Vector3DF vorticity;
+		glm::vec3 deltaPos;
+		glm::vec3 vorticity;
 	};
 
 #endif /*PARTICLE_H_*/
