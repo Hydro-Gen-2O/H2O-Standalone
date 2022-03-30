@@ -76,8 +76,6 @@
 
 		void PBF_PredictPositions();
 
-		glm::vec3 spikyKern(glm::vec3 pos1, glm::vec3 pos2);
-
 		void SPH_FindNeighbors(bool PBF);
 		void SPH_ComputeDensity();
 		void SPH_ComputeLambda();

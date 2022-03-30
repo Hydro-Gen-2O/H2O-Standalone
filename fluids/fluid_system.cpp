@@ -182,8 +182,7 @@ void FluidSystem::SPH_FindNeighbors(bool PBF) {
 		m_NC[i] = 0;
 		if (PBF) {
 			Grid_FindCells(p->predictPos, m_Param[SPH_SMOOTHRADIUS] / m_Param[SPH_SIMSCALE]);
-		}
-		else {
+		} else {
 			Grid_FindCells(p->pos, m_Param[SPH_SMOOTHRADIUS] / m_Param[SPH_SIMSCALE]);
 		}
 		for (int cell = 0; cell < 8; cell++) {
@@ -214,8 +213,7 @@ void FluidSystem::SPH_FindNeighbors(bool PBF) {
 	}
 }
 
-void FluidSystem::SPH_ComputeDensity()
-{
+void FluidSystem::SPH_ComputeDensity() {
 	for (int i = 0; i < fluidPs.size(); ++i) {
 		std::unique_ptr<Fluid>& p = fluidPs.at(i);
 		float sum = 0.0;
@@ -251,10 +249,10 @@ void FluidSystem::SPH_ComputeLambda() {
 			r /= m_Param[SPH_RESTDENSITY];
 			// End Spiky Kernel
 
-			sumGradients += (glm::length2(r));
+			sumGradients += glm::length2(r);
 			p->gradient += r; // -= r; ?? - i think += b/c -45
 		}
-		sumGradients += glm::length(p->gradient) * glm::length(p->gradient);
+		sumGradients += glm::length2(p->gradient);
 		p->lambda = -constraint / (sumGradients); // maybe + 500 or so
 
 		// BELOW - not sure ifn ecessray?

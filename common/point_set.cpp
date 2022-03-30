@@ -62,22 +62,15 @@ void PointSet::Grid_Setup (glm::vec3 min, glm::vec3 max, float sim_scale, float 
 	float world_cellsize = cell_size / sim_scale;
 	m_Grid.clear();
 	m_GridCnt.clear();
-	m_GridMin = min;	m_GridMin -= border;
-	m_GridMax = max;	m_GridMax += border;
-	m_GridSize = m_GridMax;
-	m_GridSize -= m_GridMin;
-	m_GridRes.x = ceil ( m_GridSize.x / world_cellsize );		// Determine grid resolution
-	m_GridRes.y = ceil ( m_GridSize.y / world_cellsize );
-	m_GridRes.z = ceil ( m_GridSize.z / world_cellsize );
-	m_GridSize.x = m_GridRes.x * cell_size / sim_scale;				// Adjust grid size to multiple of cell size
-	m_GridSize.y = m_GridRes.y * cell_size / sim_scale;
-	m_GridSize.z = m_GridRes.z * cell_size / sim_scale;
-	m_GridDelta = m_GridRes;		// delta = translate from world space to cell #
-	m_GridDelta /= m_GridSize;
+	m_GridMin = min - border;
+	m_GridMax = max + border;
+	m_GridRes = ceil((m_GridMax - m_GridMin) / world_cellsize);
+	m_GridSize = m_GridRes * world_cellsize;
+	m_GridDelta = m_GridRes / m_GridSize;
 	m_GridTotal = (int)(m_GridSize.x * m_GridSize.y * m_GridSize.z);
 
-	m_Grid.reserve ( m_GridTotal );
-	m_GridCnt.reserve ( m_GridTotal );	
+	m_Grid.reserve(m_GridTotal);
+	m_GridCnt.reserve(m_GridTotal);
 	for (int n = 0; n < m_GridTotal; n++) {
 		m_Grid.push_back(-1);
 		m_GridCnt.push_back(0);
