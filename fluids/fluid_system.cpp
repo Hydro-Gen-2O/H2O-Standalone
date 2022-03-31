@@ -182,7 +182,8 @@ void FluidSystem::SPH_FindNeighbors(bool PBF) {
 		m_NC[i] = 0;
 		if (PBF) {
 			Grid_FindCells(p->predictPos, m_Param[SPH_SMOOTHRADIUS] / m_Param[SPH_SIMSCALE]);
-		} else {
+		}
+		else {
 			Grid_FindCells(p->pos, m_Param[SPH_SMOOTHRADIUS] / m_Param[SPH_SIMSCALE]);
 		}
 		for (int cell = 0; cell < 8; cell++) {
@@ -192,13 +193,13 @@ void FluidSystem::SPH_FindNeighbors(bool PBF) {
 					std::unique_ptr<Fluid>& pcurr = fluidPs.at(pndx);
 					if (pndx == i) { pndx = pcurr->next; continue; }
 					if (PBF) {
-						d = (p->predictPos - pcurr->predictPos) * m_Param[SPH_SIMSCALE];
+						d = (p->predictPos - pcurr->predictPos);// *m_Param[SPH_SIMSCALE];
 					}
 					else {
-						d = (p->pos - pcurr->pos) * m_Param[SPH_SIMSCALE];
+						d = (p->pos - pcurr->pos);// *m_Param[SPH_SIMSCALE];
 					}
 					float lenR = glm::length(d);
-					if (lenR < m_Param[SPH_SMOOTHRADIUS]) {
+					if (lenR < m_Param[SPH_SMOOTHRADIUS] / m_Param[SPH_SIMSCALE]) {
 						if (m_NC[i] < MAX_NEIGHBOR) {
 							m_Neighbor[i][m_NC[i]] = pndx;
 							m_NDist[i][m_NC[i]] = lenR;
@@ -216,26 +217,26 @@ void FluidSystem::SPH_FindNeighbors(bool PBF) {
 void FluidSystem::SPH_ComputeDensity() {
 	for (int i = 0; i < fluidPs.size(); ++i) {
 		std::unique_ptr<Fluid>& p = fluidPs.at(i);
-		float sum = 0.0;
+		p->density = 0.0;
 		for (int j = 0; j < m_NC[i]; j++) {
-			float c = (float)m_Param[SPH_SMOOTHRADIUS] * (float)m_Param[SPH_SMOOTHRADIUS] -
-				m_NDist[i][j] * m_NDist[i][j];
-			sum += c * c * c;
+			float worldDist = m_NDist[i][j];
+			float worldRad = m_Param[SPH_SMOOTHRADIUS] / m_Param[SPH_SIMSCALE];
+
+			float c = worldRad * worldRad - worldDist * worldDist;
+			p->density += c * c * c;
 		}
-		p->density = sum * m_Param[SPH_PMASS] * m_Poly6Kern;
+		p->density *= m_Param[SPH_PMASS] * m_Poly6Kern;
+
+		float realRestDensity = m_Param[SPH_RESTDENSITY] / pow(m_Param[SPH_SIMSCALE], 6);
 		// pressure only useful for traditional SPH method
-		p->pressure = (p->density - m_Param[SPH_RESTDENSITY]) * m_Param[SPH_INTSTIFF];
+		p->pressure = (p->density * pow(m_Param[SPH_SIMSCALE], 6) - m_Param[SPH_RESTDENSITY]) *
+			m_Param[SPH_INTSTIFF];
 	}
 }
 
 void FluidSystem::SPH_ComputeLambda() {
 	for (int i = 0; i < fluidPs.size(); ++i) {
 		std::unique_ptr<Fluid>& p = fluidPs.at(i);
-
-		//WHICH?
-		//float constraint = p->density / m_Param[SPH_RESTDENSITY] - 1.f;
-		float constraint = p->density / m_Param[SPH_RESTDENSITY] - 1.f;
-
 		p->gradient = glm::vec3(0.0, 0.0, 0.0);
 		float sumGradients = 0.0f;
 		for (int j = 0; j < m_NC[i]; j++) {
@@ -244,8 +245,9 @@ void FluidSystem::SPH_ComputeLambda() {
 			// Spiky Kernel
 			glm::vec3 r = (p->predictPos - pcurr->predictPos) * m_Param[SPH_SIMSCALE];
 			r *= m_SpikyKern;			// grad of spiky (no minus)
-			r *= (m_Param[SPH_SMOOTHRADIUS] - m_NDist[i][j]) * (m_Param[SPH_SMOOTHRADIUS] - m_NDist[i][j]) /
-				m_NDist[i][j];
+			float simScaleDist = m_NDist[i][j] * m_Param[SPH_SIMSCALE];
+			r *= (m_Param[SPH_SMOOTHRADIUS] - simScaleDist) * (m_Param[SPH_SMOOTHRADIUS] - simScaleDist) /
+				simScaleDist;
 			r /= m_Param[SPH_RESTDENSITY];
 			// End Spiky Kernel
 
@@ -253,10 +255,11 @@ void FluidSystem::SPH_ComputeLambda() {
 			p->gradient += r; // -= r; ?? - i think += b/c -45
 		}
 		sumGradients += glm::length2(p->gradient);
-		p->lambda = -constraint / (sumGradients); // maybe + 500 or so
 
-		// BELOW - not sure ifn ecessray?
-		p->lambda /= m_Param[SPH_SIMSCALE];
+		float scaledDensity = p->density * pow(m_Param[SPH_SIMSCALE], 6);
+		float constraint = scaledDensity / m_Param[SPH_RESTDENSITY] - 1.f; // real scale constraint
+		//p->lambda = -constraint / (sumGradients); // maybe + 500 or so
+		p->lambda = -(constraint / m_Param[SPH_SIMSCALE]) / (sumGradients + 600); // maybe + 500 or so
 	}
 }
 
@@ -268,16 +271,35 @@ void FluidSystem::SPH_ComputeCorrections() {
 		for (int j = 0; j < m_NC[i]; j++) {
 			std::unique_ptr<Fluid>& pcurr = fluidPs.at(m_Neighbor[i][j]);
 
+			float simScaleDist = m_NDist[i][j] * m_Param[SPH_SIMSCALE];
 			// Spiky Kernel
-			glm::vec3 r = (p->predictPos - pcurr->predictPos) * m_Param[SPH_SIMSCALE];;
+			glm::vec3 r = (p->predictPos - pcurr->predictPos) * m_Param[SPH_SIMSCALE];
 			r *= m_SpikyKern;			// grad of spiky (no minus)
-			r *= (m_Param[SPH_SMOOTHRADIUS] - m_NDist[i][j]) * (m_Param[SPH_SMOOTHRADIUS] - m_NDist[i][j]) /
-				m_NDist[i][j];
+			r *= (m_Param[SPH_SMOOTHRADIUS] - simScaleDist) * (m_Param[SPH_SMOOTHRADIUS] - simScaleDist) /
+				simScaleDist;
 			r /= m_Param[SPH_RESTDENSITY];
 			// End Spiky Kernel
 
-			r *= (p->lambda + pcurr->lambda); // TODO scorr here
-			// TODO scorr here
+			//---------Calculate SCORR-----
+			// Poly Kernel
+			float cNum = m_Param[SPH_SMOOTHRADIUS] * m_Param[SPH_SMOOTHRADIUS] - simScaleDist * simScaleDist;
+			float polyNum = cNum * cNum * cNum * m_Poly6Kern;
+			// End Poly Kernel
+
+			// Poly Kernel
+			float delQ = 0.1 * m_Param[SPH_SMOOTHRADIUS];
+			float cDen = m_Param[SPH_SMOOTHRADIUS] * m_Param[SPH_SMOOTHRADIUS] - delQ * delQ;
+			float polyDen = cDen * cDen * cDen * m_Poly6Kern;
+			// End Poly Kernel
+
+			float K = 0.00001;
+			float frac = polyNum / polyDen;
+			float sCorr = -K * frac * frac * frac * frac;
+			//------------End SCORR calculation-------
+			//std::cout << p->lambda << " " << pcurr->lambda << " " << sCorr << std::endl;
+
+			//r *= (p->lambda + pcurr->lambda); 
+			r *= (p->lambda + pcurr->lambda + sCorr);
 
 			p->deltaPos += r;
 		}
@@ -301,20 +323,38 @@ void FluidSystem::SPH_ApplyCorrections() {
 }
 
 void FluidSystem::Advance() {
-	for (std::unique_ptr<Fluid>& p : fluidPs) {
+	for (int i = 0; i < fluidPs.size(); ++i) {
 		//std::cout << "p pos: " << p->pos.x << " " << p->pos.y << " " << p->pos.z << std::endl;
 		//std::cout << "p pred: " << p->predictPos.x << " " << p->predictPos.y << " " << p->predictPos.z << std::endl;
 		//std::cout << "p delP: " << p->deltaPos.x << " " << p->deltaPos.y << " " << p->deltaPos.z << std::endl;
 		//std::cout << "p vel: " << p->vel.x << " " << p->vel.y << " " << p->vel.z << std::endl;
 		//std::cout << "p dens: " << p->density << std::endl;
 		//std::cout << "p lamb: " << p->lambda << std::endl << std::endl;
-
+		std::unique_ptr<Fluid>& p = fluidPs.at(i);
 		p->vel = (p->predictPos - p->pos) / m_DT;
-		//p->vel *= m_Param[SPH_SIMSCALE]; // ?? not sure if necesary
-		//p->vel /= m_Param[SPH_SIMSCALE];
-		// done
-		//std::cout << glm::to_string(p->vel) << std::endl;
 		//// apply vorticity confinement here?
+
+		// VISCOSITY
+		glm::vec3 acc(0.f, 0.f, 0.f);
+		for (int j = 0; j < m_NC[i]; j++) {
+			std::unique_ptr<Fluid>& pcurr = fluidPs.at(m_Neighbor[i][j]);
+			glm::vec3 vecDiff = pcurr->vel - p->vel;
+
+			float simScaleDist = m_NDist[i][j] * m_Param[SPH_SIMSCALE];
+			// Poly Kernel (???)
+			float c = m_Param[SPH_SMOOTHRADIUS] * m_Param[SPH_SMOOTHRADIUS] - simScaleDist * simScaleDist;
+			vecDiff *= c * c * c * m_Poly6Kern * m_Param[SPH_PMASS]; // ???? why is  mass used m_DT?
+			// End Poly Kernel
+
+			acc += vecDiff;
+		}
+		float viscC = 0.05;
+		acc *= viscC;
+		//std::cout << glm::to_string(p->vel) << " " << glm::to_string(acc) << std::endl;
+		//p->vel += acc * m_DT;
+		//p->vel += acc;
+		// END VISCOSITY
+
 		p->pos = p->predictPos;
 	}
 }
@@ -326,12 +366,14 @@ void FluidSystem::SPH_ComputeForceGridNC()
 	for (int i = 0; i < fluidPs.size(); ++i) {
 		std::unique_ptr<Fluid>& p = fluidPs.at(i);
 		p->sph_force = glm::vec3(0, 0, 0);
+
 		for (int j = 0; j < m_NC[i]; j++) {
 			std::unique_ptr<Fluid>& pcurr = fluidPs.at(m_Neighbor[i][j]);
-			float c = (m_Param[SPH_SMOOTHRADIUS] - m_NDist[i][j]);
+			float c = (m_Param[SPH_SMOOTHRADIUS] - m_NDist[i][j] * m_Param[SPH_SIMSCALE]);
 			// m_NDist[i][j] == lenR, simscale distance
 			float pterm = -0.5f * c * m_SpikyKern * (p->pressure + pcurr->pressure);
-			float dterm = c * (1.f / p->density) * (1.f / pcurr->density);
+			float dterm = c * (1.f / (p->density * pow(m_Param[SPH_SIMSCALE], 6))) *
+				(1.f / (pcurr->density * pow(m_Param[SPH_SIMSCALE], 6)));
 			float vterm = m_LapKern * m_Param[SPH_VISC];
 			p->sph_force += (pterm * (p->pos - pcurr->pos) +
 				vterm * (pcurr->vel_eval - p->vel_eval)) * dterm;
