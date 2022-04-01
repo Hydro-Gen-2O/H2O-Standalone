@@ -43,10 +43,13 @@ void PointSet::Draw ( float* view_mat, float rad )
 //	dat += mBuf.stride;
 //}
 //glEnd();
+	
 		glLoadMatrixf(view_mat);
 		for (auto& f : fluidPs) {
+			glm::vec3 scaledPos = f->pos;
+			scaledPos /= 0.1;
 			glPushMatrix();
-			glTranslatef(f->pos.x, f->pos.y, f->pos.z);
+			glTranslatef(scaledPos.x, scaledPos.y, scaledPos.z);
 			glScalef(0.2, 0.2, 0.2);
 			glColor4f(RED(f->clr), GRN(f->clr), BLUE(f->clr), ALPH(f->clr));
 			drawSphere();
@@ -85,9 +88,9 @@ void PointSet::Grid_InsertParticles ()
 	}
 	for (int n = 0; n < fluidPs.size(); ++n) {
 		std::unique_ptr<Fluid>& p = fluidPs.at(n);
-		int gx = (int)((p->pos.x - m_GridMin.x) * m_GridDelta.x);		// Determine grid cell
-		int gy = (int)((p->pos.y - m_GridMin.y) * m_GridDelta.y);
-		int gz = (int)((p->pos.z - m_GridMin.z) * m_GridDelta.z);
+		int gx = (int)((p->predictPos.x - m_GridMin.x) * m_GridDelta.x);		// Determine grid cell
+		int gy = (int)((p->predictPos.y - m_GridMin.y) * m_GridDelta.y);
+		int gz = (int)((p->predictPos.z - m_GridMin.z) * m_GridDelta.z);
 		int gs = (int)((gz * m_GridRes.y + gy) * m_GridRes.x + gx);
 		if (gs >= 0 && gs < m_GridTotal) {
 			p->next = m_Grid[gs];

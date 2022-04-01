@@ -74,6 +74,14 @@
 		void SPH_CreateExample(int n, int nmax);
 		void SPH_DrawDomain ();
 
+		void SPH_SetupGrid();
+		void SPH_FindNeighborsPBF();
+		void SPH_ComputeDensity_NEW();
+		void SPH_ComputeLambda_NEW();
+		void SPH_ComputeCorrections_NEW();
+		void SPH_ApplyCorrections_NEW();
+		void Advance_NEW();
+
 		void PBF_PredictPositions();
 
 		void SPH_FindNeighbors(bool PBF);
