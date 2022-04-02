@@ -165,17 +165,7 @@ void reshape ( int width, int height )
 
 void keyboard_func ( unsigned char key, int x, int y )
 {
-	// m: run sim with double particles; n run sim with half
 	switch( key ) {
-	case 'x': case 'X':
-		if ( ++iClrMode > 2) iClrMode = 0;
-		psys.SetParam ( CLR_MODE, iClrMode );
-		break;
-	case 'd': case 'D': {
-		int d = psys.GetParam ( PNT_DRAWMODE ) + 1;
-		if ( d > 2 ) d = 0;
-		psys.SetParam ( PNT_DRAWMODE, d );
-		} break;
 	case 's': case 'S':	if ( ++iShade > 2 ) iShade = 0;		break;
 	case ' ':
 		bPause = !bPause;	break;
@@ -266,19 +256,16 @@ void init ()
 	cam_fov = 35.0;
 
 	psys.SPH_CreateExample ( psys_demo, psys_nmax );
-
-	psys.SetParam ( PNT_DRAWMODE, int(bPntDraw ? 1:0) );
-	psys.SetParam ( CLR_MODE, iClrMode );	
 }
 
 
 int main ( int argc, char **argv )
 {
 	glutInit( &argc, &argv[0] ); 
-	glutInitDisplayMode( GLUT_RGB | GLUT_DOUBLE | GLUT_DEPTH );
-	glutInitWindowPosition( 100, 100 );
-	glutInitWindowSize( (int) window_width, (int) window_height );
-	glutCreateWindow ( "Fluids v.1 (c) 2008, R. Hoetzlein (ZLib)" );
+	glutInitDisplayMode(GLUT_RGB | GLUT_DOUBLE | GLUT_DEPTH);
+	glutInitWindowPosition(100, 100);
+	glutInitWindowSize((int)window_width, (int)window_height);
+	glutCreateWindow("Hydro-Gen 2O Standalone");
 
 //	glutFullScreen ();
  

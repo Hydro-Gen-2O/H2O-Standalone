@@ -28,27 +28,10 @@
 	#include <stdio.h>
 	#include <stdlib.h>
 	#include <math.h>
-
-	#include "point_set.h"
 	#include "fluid.h"
 	
 	// Scalar params
-	#define SPH_SIMSCALE		5
 	#define SPH_VISC			6
-	#define SPH_RESTDENSITY		7
-	#define SPH_PMASS			8
-	#define SPH_PRADIUS			9
-	#define SPH_PDIST			10
-	#define SPH_SMOOTHRADIUS	11
-	#define SPH_INTSTIFF		12
-	#define SPH_EXTSTIFF		13
-	#define SPH_EXTDAMP			14
-	#define SPH_LIMIT			15
-	#define BOUND_ZMIN_SLOPE	16
-	#define FORCE_XMAX_SIN		17
-	#define FORCE_XMIN_SIN		18
-	#define MAX_FRAC			19
-	#define CLR_MODE			20
 
 	// Vector params
 	#define SPH_VOLMIN			7
@@ -57,44 +40,48 @@
 	#define SPH_INITMAX			10
 	
 	#define MAX_PARAM			21
-	#define BFLUID				2
 
-	class FluidSystem : public PointSet {
+#define MAX_NEIGHBOR		80
+
+#define MAX_PARAM			21
+
+	class FluidSystem {
 	public:
 		FluidSystem ();
 
-		// Basic Particle System
+		void Draw(float* view_mat, float rad);
+
 		virtual void Run ();
-		virtual void Advance ();
-		
-		void AdvanceOld();
-		
-		// Smoothed Particle Hydrodynamics
-		void SPH_Setup(int n);
+
 		void SPH_CreateExample(int n, int nmax);
-		void SPH_DrawDomain ();
-
-		void SPH_SetupGrid();
-		void SPH_FindNeighborsPBF();
-		void SPH_ComputeDensity_NEW();
-		void SPH_ComputeLambda_NEW();
-		void SPH_ComputeCorrections_NEW();
-		void SPH_ApplyCorrections_NEW();
-		void Advance_NEW();
-
-		void PBF_PredictPositions();
-
-		void SPH_FindNeighbors(bool PBF);
-		void SPH_ComputeDensity();
-		void SPH_ComputeLambda();
-		void SPH_ComputeCorrections();
-		void SPH_ApplyCorrections();
-
-		void SPH_ComputeForceGridNC ();				// O(cn) - neighbor table
+		void SPH_DrawDomain();
 
 	private:
+		void PredictPositions();
+		void FindNeighbors();
+		void ComputeDensity();
+		void ComputeLambda();
+		void ComputeCorrections();
+		void ApplyCorrections();
+		void Advance();
+
+		glm::vec3 GetGridPos(glm::vec3 pos);
+		int GetGridIndex(glm::vec3 gridPos);
+
+		float						m_Param[MAX_PARAM];			// see defines above
+		glm::vec3					m_Vec[MAX_PARAM];
+		float m_DT;
+
+		std::vector<std::unique_ptr<Fluid>> fluidPs;
+		// grid maps indexSpace To vector of fluid there
+		std::vector<std::vector<int>> grid;
+		std::vector<std::vector<int>> neighbors;
+
+		// the axis between the bounds of the fluid https://en.wikipedia.org/wiki/Space_diagonal
+		glm::vec3 gridSpaceDiag;
+		int totalGridCells;
 		// Smoothed Particle Hydrodynamics
-		double m_R2, m_Poly6Kern, m_LapKern, m_SpikyKern; // Kernel functions
+		float m_Poly6Kern, m_SpikyKern; // Kernel functions
 	};
 
 #endif

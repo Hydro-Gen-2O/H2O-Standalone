@@ -18,9 +18,6 @@
     <ClCompile Include="common\gl_helper.cpp">
       <Filter>common</Filter>
     </ClCompile>
-    <ClCompile Include="common\point_set.cpp">
-      <Filter>common</Filter>
-    </ClCompile>
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -34,9 +31,6 @@
       <Filter>common</Filter>
     </ClInclude>
     <ClInclude Include="common\gl_helper.h">
-      <Filter>common</Filter>
-    </ClInclude>
-    <ClInclude Include="common\point_set.h">
       <Filter>common</Filter>
     </ClInclude>
   </ItemGroup>
