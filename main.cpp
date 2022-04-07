@@ -92,11 +92,11 @@ void drawScene ( float* viewmat, bool bShade )
 		}
 		glEnd ();
 
-		psys.Draw ( &viewmat[0], 0.8 );				// Draw particles		
+		psys.Draw ( &viewmat[0] );				// Draw particles		
 		psys.SPH_DrawDomain();
 	} else {
 		glDisable ( GL_LIGHTING );
-		psys.Draw ( &viewmat[0], 0.55 );			// Draw particles
+		psys.Draw ( &viewmat[0] );			// Draw particles
 	}
 }
 

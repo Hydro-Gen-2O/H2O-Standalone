@@ -28,31 +28,21 @@
 
 	class Fluid {
 	public:
-		Fluid() {
-			sph_force = glm::vec3(0, 0, 0);
-			vel = glm::vec3(0, 0, 0);
-			vel_eval = glm::vec3(0, 0, 0);
-			gradient = glm::vec3(0, 0, 0);
-			deltaPos = glm::vec3(0, 0, 0);
-			next = 0x0;
-			pressure = 0;
-			density = 0;
-		}
+		Fluid(const glm::vec3 &pos, DWORD d) : 
+			pos(pos), predictPos(pos),
+			clr(d), vel(glm::vec3(0.f)), deltaPos(glm::vec3(0.f)), 
+			density(0.f), lambda(0.f), vorticity(glm::vec3(0.f))
+		{}
 		glm::vec3		predictPos;
 		glm::vec3		pos;			// Basic particle (must match Particle class)
 		DWORD			clr;
-		int				next;
 		glm::vec3		vel;
-		glm::vec3		vel_eval;
 
-		float			pressure;		// Smoothed Particle Hydrodynamics
-		float			density;	
-		glm::vec3		sph_force;
-
-		glm::vec3 gradient;
+		//SPH
+		float density;	
 		float lambda;
 		glm::vec3 deltaPos;
 		glm::vec3 vorticity;
 	};
 
-#endif /*PARTICLE_H_*/
+#endif
