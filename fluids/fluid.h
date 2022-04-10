@@ -30,8 +30,8 @@
 	public:
 		Fluid(const glm::vec3 &pos, DWORD d) : 
 			pos(pos), predictPos(pos),
-			clr(d), vel(glm::vec3(0.f)), deltaPos(glm::vec3(0.f)), 
-			density(0.f), lambda(0.f), vorticity(glm::vec3(0.f))
+			clr(d), vel(glm::vec3(0.0)), deltaPos(glm::vec3(0.0)), 
+			density(0.0), lambda(0.0), vorticity(glm::vec3(0.0))
 		{}
 		glm::vec3		predictPos;
 		glm::vec3		pos;			// Basic particle (must match Particle class)
@@ -39,8 +39,8 @@
 		glm::vec3		vel;
 
 		//SPH
-		float density;	
-		float lambda;
+		double density;	
+		double lambda;
 		glm::vec3 deltaPos;
 		glm::vec3 vorticity;
 	};

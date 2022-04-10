@@ -33,14 +33,14 @@
 	
 	// Tunable(ish) parameters
 	#define FLUID_ITERS 4
-	#define m_DT 0.0083f
-	#define SPH_RADIUS 0.1f
+	#define m_DT 0.0083
+	#define SPH_RADIUS 0.1
 	// ???  RES_DESNTIY 6000 works but not even 6001 let alone 6378?
-	#define REST_DENSITY 6378.f
+	#define REST_DENSITY 6378.0
 	#define MAX_NEIGHBOR 50
 	
-	#define K_CORR 0.00001f
-	#define VISC_CONST 0.01f
+	#define K_CORR 0.0001
+	#define VISC_CONST 0.0001
 
 	// Vector params
 	#define SPH_VOLMIN			7
@@ -76,7 +76,7 @@
 		// get index in grid space
 		int GetGridIndex(const glm::vec3 &gridPos);
 
-		float m_Param[MAX_PARAM];			// see defines above
+		double m_Param[MAX_PARAM];			// see defines above
 		glm::vec3 m_Vec[MAX_PARAM];
 
 		std::vector<std::unique_ptr<Fluid>> fluidPs;
@@ -88,6 +88,6 @@
 		glm::vec3 gridSpaceDiag;
 		int totalGridCells;
 		// Smoothed Particle Hydrodynamics
-		float m_Poly6Kern; // Kernel functions
+		double m_Poly6Kern; // Kernel functions
 	};
 #endif
