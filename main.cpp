@@ -35,7 +35,7 @@ extern "C" { FILE __iob_func[3] = { *stdin,*stdout,*stderr }; }
 
 #include <gl/glut.h>
 // Globals
-FluidSystem			psys;
+FluidSystem	psys;
 
 float window_width  = 1024;
 float window_height = 768;

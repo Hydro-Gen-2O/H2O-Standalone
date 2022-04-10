@@ -23,19 +23,16 @@
 #ifndef DEF_FLUID_SYS
 	#define DEF_FLUID_SYS
 
-	#include <iostream>
 	#include <vector>
-	#include <math.h>
 	#include "fluid.h"
 	
 	// Physical constants
 	#define GRAVITY glm::vec3(0, 0, -9.8)
 	
 	// Tunable(ish) parameters
-	#define FLUID_ITERS 4
+	#define FLUID_ITERS 1
 	#define m_DT 0.0083f
 	#define SPH_RADIUS 0.1f
-	// ???  RES_DESNTIY 6000 works but not even 6001 let alone 6378?
 	#define REST_DENSITY 6378.f
 	#define MAX_NEIGHBOR 50
 	
@@ -43,13 +40,10 @@
 	#define VISC_CONST 0.01f
 
 	// Vector params
-	#define SPH_VOLMIN			7
-	#define SPH_VOLMAX			8
-	#define SPH_INITMIN			9
-	#define SPH_INITMAX			10
-
-	#define MAX_PARAM			21
-	
+	#define SPH_VOLMIN glm::vec3(-2, -2, 0)//glm::vec3(-4, -4, 0)
+	#define SPH_VOLMAX glm::vec3(2, 2, 10)
+	#define SPH_INITMIN	glm::vec3(-1, -1, 3)
+	#define SPH_INITMAX	glm::vec3(1, 1, 8)
 
 	class FluidSystem {
 	public:
@@ -70,14 +64,12 @@
 		void ApplyCorrections();
 		void Advance();
 
+		float PolyKernel(float dist);
 		void SpikyKernel(glm::vec3 &r);
 
-		glm::vec3 GetGridPos(const glm::vec3 &pos);
+		glm::ivec3 GetGridPos(const glm::vec3 &pos);
 		// get index in grid space
-		int GetGridIndex(const glm::vec3 &gridPos);
-
-		float m_Param[MAX_PARAM];			// see defines above
-		glm::vec3 m_Vec[MAX_PARAM];
+		int GetGridIndex(const glm::ivec3 &gridPos);
 
 		std::vector<std::unique_ptr<Fluid>> fluidPs;
 		// grid maps indexSpace To vector of fluid there
@@ -85,9 +77,7 @@
 		std::vector<std::vector<int>> neighbors;
 
 		// the axis between the bounds of the fluid https://en.wikipedia.org/wiki/Space_diagonal
-		glm::vec3 gridSpaceDiag;
+		glm::ivec3 gridSpaceDiag;
 		int totalGridCells;
-		// Smoothed Particle Hydrodynamics
-		float m_Poly6Kern; // Kernel functions
 	};
 #endif

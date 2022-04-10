@@ -29,8 +29,9 @@
 	class Fluid {
 	public:
 		Fluid(const glm::vec3 &pos, DWORD d) : 
-			pos(pos), predictPos(pos),
-			clr(d), vel(glm::vec3(0.f)), deltaPos(glm::vec3(0.f)), 
+			pos(pos), clr(d), 
+			predictPos(glm::vec3(0.f)), deltaPos(glm::vec3(0.f)),
+			vel(glm::vec3(0.f)), 
 			density(0.f), lambda(0.f), vorticity(glm::vec3(0.f))
 		{}
 		glm::vec3		predictPos;
