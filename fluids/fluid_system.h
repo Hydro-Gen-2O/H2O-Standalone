@@ -30,7 +30,7 @@
 	#define GRAVITY glm::dvec3(0, 0, -9.8)
 	
 	// Tunable(ish) parameters
-	#define FLUID_ITERS 1
+	#define FLUID_ITERS 2
 	#define m_DT 0.0083
 	#define SPH_RADIUS 0.1
 	#define REST_DENSITY 6378.0
@@ -40,10 +40,10 @@
 	#define VISC_CONST 0.01
 
 	// Vector params
-	#define SPH_VOLMIN glm::dvec3(-2, -2, 0)
-	#define SPH_VOLMAX glm::dvec3(2, 2, 10)
-	#define SPH_INITMIN	glm::dvec3(-1, -1, 3)
-	#define SPH_INITMAX	glm::dvec3(1, 1, 8)
+	#define SPH_VOLMIN glm::ivec3(-4, -4, 0)
+	#define SPH_VOLMAX glm::ivec3(4, 4, 10)
+	#define SPH_INITMIN	glm::ivec3(-2, -2, 3)
+	#define SPH_INITMAX	glm::ivec3(2, 2, 7)
 
 	class FluidSystem {
 	public:
@@ -56,6 +56,14 @@
 		void SPH_CreateExample(int n, int nmax);
 		void SPH_DrawDomain();
 	private:
+		glm::dvec3 scaledMin = glm::dvec3(SPH_VOLMIN) * SPH_RADIUS;
+		glm::dvec3 scaledMax = glm::dvec3(SPH_VOLMAX) * SPH_RADIUS;
+
+		// the axis between the bounds of the fluid https://en.wikipedia.org/wiki/Space_diagonal
+		glm::ivec3 gridSpaceDiag = glm::ivec3((scaledMax - scaledMin) / SPH_RADIUS);
+
+		int totalGridCells = gridSpaceDiag.x * gridSpaceDiag.y * gridSpaceDiag.z;
+
 		void PredictPositions();
 		void FindNeighbors();
 		void ComputeDensity();
@@ -75,9 +83,5 @@
 		// grid maps indexSpace To vector of fluid there
 		std::vector<std::vector<int>> grid;
 		std::vector<std::vector<int>> neighbors;
-
-		// the axis between the bounds of the fluid https://en.wikipedia.org/wiki/Space_diagonal
-		glm::ivec3 gridSpaceDiag;
-		int totalGridCells;
 	};
 #endif
