@@ -27,23 +27,23 @@
 	#include "fluid.h"
 	
 	// Physical constants
-	#define GRAVITY glm::vec3(0, 0, -9.8)
+	#define GRAVITY glm::dvec3(0, 0, -9.8)
 	
 	// Tunable(ish) parameters
 	#define FLUID_ITERS 1
-	#define m_DT 0.0083f
-	#define SPH_RADIUS 0.1f
-	#define REST_DENSITY 6378.f
+	#define m_DT 0.0083
+	#define SPH_RADIUS 0.1
+	#define REST_DENSITY 6378.0
 	#define MAX_NEIGHBOR 50
 	
-	#define K_CORR 0.00001f
-	#define VISC_CONST 0.01f
+	#define K_CORR 0.00001
+	#define VISC_CONST 0.01
 
 	// Vector params
-	#define SPH_VOLMIN glm::vec3(-2, -2, 0)//glm::vec3(-4, -4, 0)
-	#define SPH_VOLMAX glm::vec3(2, 2, 10)
-	#define SPH_INITMIN	glm::vec3(-1, -1, 3)
-	#define SPH_INITMAX	glm::vec3(1, 1, 8)
+	#define SPH_VOLMIN glm::dvec3(-2, -2, 0)
+	#define SPH_VOLMAX glm::dvec3(2, 2, 10)
+	#define SPH_INITMIN	glm::dvec3(-1, -1, 3)
+	#define SPH_INITMAX	glm::dvec3(1, 1, 8)
 
 	class FluidSystem {
 	public:
@@ -64,10 +64,10 @@
 		void ApplyCorrections();
 		void Advance();
 
-		float PolyKernel(float dist);
-		void SpikyKernel(glm::vec3 &r);
+		double PolyKernel(double dist);
+		void SpikyKernel(glm::dvec3 &r);
 
-		glm::ivec3 GetGridPos(const glm::vec3 &pos);
+		glm::ivec3 GetGridPos(const glm::dvec3 &pos);
 		// get index in grid space
 		int GetGridIndex(const glm::ivec3 &gridPos);
 

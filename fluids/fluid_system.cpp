@@ -34,7 +34,7 @@ void FluidSystem::Draw(float* view_mat) {
 	glEnable(GL_NORMALIZE);
 	glLoadMatrixf(view_mat);
 	for (auto& f : fluidPs) {
-		glm::vec3 scaledPos = f->pos;
+		glm::dvec3 scaledPos = f->pos;
 		scaledPos /= SPH_RADIUS;
 		glPushMatrix();
 		glTranslatef(scaledPos.x, scaledPos.y, scaledPos.z);
@@ -63,14 +63,14 @@ void FluidSystem::SPH_DrawDomain() {
 }
 
 void FluidSystem::SPH_CreateExample(int n, int nmax) {
-	float ss = 0.5f;
+	double ss = 0.5;
 	//ss = 1;
-	for (float x = SPH_INITMIN.x; x <= SPH_INITMAX.x; x += ss) {
-	for (float y = SPH_INITMIN.y; y <= SPH_INITMAX.y; y += ss) {
-	for (float z = SPH_INITMIN.z; z <= SPH_INITMAX.z; z += ss) {
-		//glm::vec3 init = glm::vec3(x, y, z) * SPH_RADIUS * 0.5f;
+	for (double x = SPH_INITMIN.x; x <= SPH_INITMAX.x; x += ss) {
+	for (double y = SPH_INITMIN.y; y <= SPH_INITMAX.y; y += ss) {
+	for (double z = SPH_INITMIN.z; z <= SPH_INITMAX.z; z += ss) {
+		//glm::dvec3 init = glm::dvec3(x, y, z) * SPH_RADIUS * 0.5;
 		fluidPs.push_back(std::make_unique<Fluid>(
-			glm::vec3(x, y, z) * SPH_RADIUS, 
+			glm::dvec3(x, y, z) * SPH_RADIUS, 
 			COLORA(0.5, 0.5, 0.6, 1)));
 	}}}
 
@@ -88,9 +88,9 @@ void FluidSystem::SPH_CreateExample(int n, int nmax) {
 	}
 }
 
-glm::ivec3 FluidSystem::GetGridPos(const glm::vec3 &pos) {
+glm::ivec3 FluidSystem::GetGridPos(const glm::dvec3 &pos) {
 	// round - replace w/ other things check??
-	//glm::vec3 out = glm::vec3(std::lround(pos.x / SPH_RADIUS - m_Vec[SPH_VOLMIN].x),
+	//glm::dvec3 out = glm::dvec3(std::lround(pos.x / SPH_RADIUS - m_Vec[SPH_VOLMIN].x),
 	//	std::lround(pos.y / SPH_RADIUS - m_Vec[SPH_VOLMIN].y),
 	//	std::lround(pos.z / SPH_RADIUS - m_Vec[SPH_VOLMIN].z));
 
@@ -122,10 +122,10 @@ void FluidSystem::Run() {
 
 void FluidSystem::PredictPositions() {
 	for (std::unique_ptr<Fluid>& p : fluidPs) {
-		glm::vec3 deltaVel = GRAVITY * m_DT; // a * dt = change in v
+		glm::dvec3 deltaVel = GRAVITY * m_DT; // a * dt = change in v
 
 		// apply force to velocity (gravity)
-		p->vel += deltaVel;
+		//p->vel += deltaVel;
 		p->predictPos = p->pos + (p->vel * m_DT);
 	}
 }
@@ -166,7 +166,7 @@ void FluidSystem::FindNeighbors() {
 				int gIndex = GetGridIndex(n);
 				for (int pIndex : grid.at(gIndex)) { // each 
 					std::unique_ptr<Fluid>& pcurr = fluidPs.at(pIndex);
-					float lenR = glm::length(p->predictPos - pcurr->predictPos);
+					double lenR = glm::length(p->predictPos - pcurr->predictPos);
 					if (lenR <= SPH_RADIUS && lenR != 0) {
 						neighbors.at(i).push_back(pIndex);
 						//if (neighbors.at(i).size() >= MAX_NEIGHBOR) { goto neighbor_loop; }
@@ -177,15 +177,15 @@ void FluidSystem::FindNeighbors() {
 	}
 }
 
-float FluidSystem::PolyKernel(float dist) {
-	float c = SPH_RADIUS * SPH_RADIUS - dist * dist;
-	float wPoly = 315.f / (64.f * 3.141592 * pow(SPH_RADIUS, 9));
+double FluidSystem::PolyKernel(double dist) {
+	double c = SPH_RADIUS * SPH_RADIUS - dist * dist;
+	double wPoly = 315.0 / (64.0 * 3.141592 * pow(SPH_RADIUS, 9));
 	return c * c * c * wPoly;
 }
 
-void FluidSystem::SpikyKernel(glm::vec3& r) {
-	float dist = glm::length(r);
-	r *= -45.f / (3.141592f * pow(SPH_RADIUS, 6));
+void FluidSystem::SpikyKernel(glm::dvec3& r) {
+	double dist = glm::length(r);
+	r *= -45.0 / (3.141592 * pow(SPH_RADIUS, 6));
 	r *= (SPH_RADIUS - dist) * (SPH_RADIUS - dist) / dist;
 	r /= REST_DENSITY;
 }
@@ -203,13 +203,13 @@ void FluidSystem::ComputeDensity() {
 void FluidSystem::ComputeLambda() {
 	for (int i = 0; i < fluidPs.size(); ++i) {
 		std::unique_ptr<Fluid>& p = fluidPs.at(i);
-		float sumGradients = 0.f;
-		glm::vec3 pGrad = glm::vec3(0.f);
+		double sumGradients = 0.0;
+		glm::dvec3 pGrad = glm::dvec3(0.0);
 		for (int j : neighbors.at(i)) { // for each neighbor
 			std::unique_ptr<Fluid>& pcurr = fluidPs.at(j);
 
 			// Spiky Kernel - modifies r by ref
-			glm::vec3 r = (p->predictPos - pcurr->predictPos);
+			glm::dvec3 r = (p->predictPos - pcurr->predictPos);
 			SpikyKernel(r);
 			// End Spiky Kernel
 
@@ -217,26 +217,26 @@ void FluidSystem::ComputeLambda() {
 			pGrad += r; // -= r; ?? - i think += b/c -45
 		}
 		sumGradients += glm::length2(pGrad);
-		float constraint = p->density / REST_DENSITY - 1.f; // real scale constraint
-		p->lambda = -constraint / (sumGradients + 600.f); // maybe + 500 or so
+		double constraint = p->density / REST_DENSITY - 1.0; // real scale constraint
+		p->lambda = -constraint / (sumGradients + 600.0); // maybe + 500 or so
 	}
 }
 
 void FluidSystem::ComputeCorrections() {
-	float polyDen = PolyKernel(0.2f * SPH_RADIUS);
+	double polyDen = PolyKernel(0.2 * SPH_RADIUS);
 	for (int i = 0; i < fluidPs.size(); ++i) {
 		std::unique_ptr<Fluid>& p = fluidPs.at(i);
-		p->deltaPos = glm::vec3(0.f);
+		p->deltaPos = glm::dvec3(0.0);
 		for (int j : neighbors.at(i)) { // for each neighbor
 			std::unique_ptr<Fluid>& pcurr = fluidPs.at(j);
 			//---------Calculate SCORR-----
-			float polyNum = PolyKernel(glm::length(p->predictPos - pcurr->predictPos));
-			float frac = polyNum / polyDen;
-			float sCorr = -K_CORR * frac * frac * frac * frac;
+			double polyNum = PolyKernel(glm::length(p->predictPos - pcurr->predictPos));
+			double frac = polyNum / polyDen;
+			double sCorr = -K_CORR * frac * frac * frac * frac;
 			//------------End SCORR calculation-------
 
 			// Spiky Kernel - modifies r by ref
-			glm::vec3 r = (p->predictPos - pcurr->predictPos);
+			glm::dvec3 r = (p->predictPos - pcurr->predictPos);
 			SpikyKernel(r);
 			// End Spiky Kernel
 
@@ -249,8 +249,8 @@ void FluidSystem::ComputeCorrections() {
 void FluidSystem::ApplyCorrections() {
 	for (std::unique_ptr<Fluid>& p : fluidPs) {
 		p->predictPos += p->deltaPos;
-		glm::vec3 scaledMin = SPH_VOLMIN * SPH_RADIUS;
-		glm::vec3 scaledMax = SPH_VOLMAX * SPH_RADIUS;
+		glm::dvec3 scaledMin = SPH_VOLMIN * SPH_RADIUS;
+		glm::dvec3 scaledMax = SPH_VOLMAX * SPH_RADIUS;
 		// Perform collision detect and response
 		if (p->predictPos.y < scaledMin.y) { p->vel.y = 0.0; p->predictPos.y = scaledMin.y + 0.001; }
 		if (p->predictPos.y > scaledMax.y) { p->vel.y = 0.0; p->predictPos.y = scaledMax.y - 0.001; }
@@ -278,7 +278,7 @@ void FluidSystem::Advance() {
 	// VISCOSITY - for some reaosn this doesn't work with more than 1 fluid iteration?
 	for (int i = 0; i < fluidPs.size(); ++i) {
 		std::unique_ptr<Fluid>& p = fluidPs.at(i);
-		glm::vec3 acc(0.f, 0.f, 0.f);
+		glm::dvec3 acc(0.0, 0.0, 0.0);
 		for (int j : neighbors.at(i)) { // for each neighbor
 			std::unique_ptr<Fluid>& pcurr = fluidPs.at(j);
 			acc += (pcurr->vel - p->vel) * PolyKernel(glm::length(p->predictPos - pcurr->predictPos));
