@@ -35,6 +35,7 @@
 	#define SPH_RADIUS 0.1
 	#define REST_DENSITY 6378.0
 	#define MAX_NEIGHBOR 50
+	#define RELAXATION 600.0
 	
 	#define K_CORR 0.00001
 	#define VISC_CONST 0.01
