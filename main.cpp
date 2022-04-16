@@ -35,12 +35,12 @@ extern "C" { FILE __iob_func[3] = { *stdin,*stdout,*stderr }; }
 
 #include <gl/glut.h>
 // Globals
-FluidSystem			psys;
+FluidSystem	psys;
 
 float window_width  = 1024;
 float window_height = 768;
 
-Vector3DF	cam_from, cam_angs, cam_to;			// Camera stuff
+glm::vec3	cam_from, cam_angs, cam_to;			// Camera stuff
 float		cam_fov;	
 
 int		psys_demo = -1; // CHANGE TO CHANGE  SIM TYPE
@@ -92,62 +92,11 @@ void drawScene ( float* viewmat, bool bShade )
 		}
 		glEnd ();
 
-		psys.Draw ( &viewmat[0], 0.8 );				// Draw particles		
+		psys.Draw ( &viewmat[0] );				// Draw particles		
 		psys.SPH_DrawDomain();
 	} else {
 		glDisable ( GL_LIGHTING );
-		psys.Draw ( &viewmat[0], 0.55 );			// Draw particles
-	}
-}
-
-void draw2D ()
-{
-	glDisable ( GL_LIGHTING );  
-	glDisable ( GL_DEPTH_TEST );
-
-	glMatrixMode ( GL_PROJECTION );
-	glLoadIdentity ();  
-	glScalef ( 2.0/window_width, -2.0/window_height, 1 );		// Setup view (0,0) to (800,600)
-	glTranslatef ( -window_width/2.0, -window_height/2, 0.0);
-
-	glMatrixMode ( GL_MODELVIEW );
-	glLoadIdentity ();
-	glPushMatrix (); 
-	glGetFloatv ( GL_MODELVIEW_MATRIX, view_matrix ); 
-	glPopMatrix (); 
-
-	char disp[200];
-	glColor4f ( 1.0, 1.0, 1.0, 1.0 );
-
-	strcpy ( disp, "Press H for help." );		drawText ( 10, 20, disp );  
-
-	if ( bHelp ) {	
-		sprintf ( disp,	"Kernel:  USING CPU" );				drawText ( 20, 40,  disp );
-
-		sprintf ( disp,	"KEYBOARD" );						drawText ( 20, 60,  disp );
-		sprintf ( disp,	"[ ]    Next/Prev Demo" );			drawText ( 20, 70,  disp );
-		sprintf ( disp,	"space  Pause" );					drawText ( 20, 90,  disp );
-		sprintf ( disp,	"S      Shading mode" );			drawText ( 20, 100,  disp );	
-		sprintf ( disp,	"X      Draw velocity/pressure/color" );	drawText ( 20, 170,  disp );
-
-		Vector3DF vol = psys.GetVec(SPH_VOLMAX);
-		vol -= psys.GetVec(SPH_VOLMIN);
-		sprintf ( disp,	"Volume Size:           %3.5f %3.2f %3.2f", vol.x, vol.y, vol.z );	drawText ( 20, 190,  disp );
-		sprintf ( disp,	"Time Step (dt):        %3.5f", psys.GetDT () );					drawText ( 20, 200,  disp );
-		sprintf ( disp,	"Num Particles:         %d", psys.NumPoints() );					drawText ( 20, 210,  disp );		
-		sprintf ( disp,	"Simulation Scale:      %3.5f", psys.GetParam(SPH_SIMSIZE) );		drawText ( 20, 220,  disp );
-		sprintf ( disp,	"Simulation Size (m):   %3.5f", psys.GetParam(SPH_SIMSCALE) );		drawText ( 20, 230,  disp );
-		sprintf ( disp,	"Smooth Radius (m):     %3.3f", psys.GetParam(SPH_SMOOTHRADIUS) );	drawText ( 20, 240,  disp );
-		sprintf ( disp,	"Particle Radius (m):   %3.3f", psys.GetParam(SPH_PRADIUS) );		drawText ( 20, 250,  disp );
-		sprintf ( disp,	"Particle Mass (kg):    %0.8f", psys.GetParam(SPH_PMASS) );			drawText ( 20, 260,  disp );
-		sprintf ( disp,	"Rest Density (kg/m^3): %3.3f", psys.GetParam(SPH_RESTDENSITY) );	drawText ( 20, 270,  disp );
-		sprintf ( disp,	"Viscosity:             %3.3f", psys.GetParam(SPH_VISC) );			drawText ( 20, 280,  disp );
-		sprintf ( disp,	"Internal Stiffness:    %3.3f", psys.GetParam(SPH_INTSTIFF) );		drawText ( 20, 290,  disp );
-		sprintf ( disp,	"Boundary Stiffness:    %6.0f", psys.GetParam(SPH_EXTSTIFF) );		drawText ( 20, 300,  disp );
-		sprintf ( disp,	"Boundary Dampening:    %4.3f", psys.GetParam(SPH_EXTDAMP) );		drawText ( 20, 310,  disp );
-		sprintf ( disp,	"Speed Limiting:        %4.3f", psys.GetParam(SPH_LIMIT) );			drawText ( 20, 320,  disp );
-		vol = psys.GetVec ( PLANE_GRAV_DIR );
-		sprintf ( disp,	"Gravity:               %3.2f %3.2f %3.2f", vol.x, vol.y, vol.z );	drawText ( 20, 330,  disp );
+		psys.Draw ( &viewmat[0] );			// Draw particles
 	}
 }
 
@@ -201,8 +150,6 @@ void display ()
 	glEnable ( GL_LIGHTING );  
 	glLoadMatrixf ( view_matrix );	
 	drawScene ( view_matrix, true );
-	// Draw 2D overlay
-	draw2D ();
  
 	// Swap buffers
 	glutSwapBuffers();  
@@ -218,42 +165,10 @@ void reshape ( int width, int height )
 
 void keyboard_func ( unsigned char key, int x, int y )
 {
-	// m: run sim with double particles; n run sim with half
 	switch( key ) {
-	case 'M': case 'm': {
-		psys_nmax *= 2;
-		if ( psys_nmax > 65535 ) psys_nmax = 65535;		
-		psys.SPH_CreateExample ( psys_demo, psys_nmax );
-		} break;
-	case 'N': case 'n': {
-		psys_nmax /= 2;
-		if ( psys_nmax < 64 ) psys_nmax = 64;		
-		psys.SPH_CreateExample ( psys_demo, psys_nmax );
-		} break;
-	case 'h': case 'H':	bHelp = !bHelp; break;
-	case 'x': case 'X':
-		if ( ++iClrMode > 2) iClrMode = 0;
-		psys.SetParam ( CLR_MODE, iClrMode );
-		break;
-	case 'd': case 'D': {
-		int d = psys.GetParam ( PNT_DRAWMODE ) + 1;
-		if ( d > 2 ) d = 0;
-		psys.SetParam ( PNT_DRAWMODE, d );
-		} break;
 	case 's': case 'S':	if ( ++iShade > 2 ) iShade = 0;		break;
-	case ' ':		
-		//psys.Run (); ptris.Rebuild (); break;
+	case ' ':
 		bPause = !bPause;	break;
-	case '[':
-		psys_demo--;
-		if (psys_demo < 0 ) psys_demo = 10;
-		psys.SPH_CreateExample ( psys_demo, psys_nmax );
-		break;
-	case ']':
-		psys_demo++;
-		if (psys_demo > 10 ) psys_demo = 0;
-		psys.SPH_CreateExample ( psys_demo, psys_nmax );
-		break;
 	default:
 	break;
   }
@@ -340,21 +255,17 @@ void init ()
 	cam_to.x = 0;		cam_to.y = 0;		cam_to.z = 5;
 	cam_fov = 35.0;
 
-	psys.Initialize ( psys_nmax );
 	psys.SPH_CreateExample ( psys_demo, psys_nmax );
-
-	psys.SetParam ( PNT_DRAWMODE, int(bPntDraw ? 1:0) );
-	psys.SetParam ( CLR_MODE, iClrMode );	
 }
 
 
 int main ( int argc, char **argv )
 {
 	glutInit( &argc, &argv[0] ); 
-	glutInitDisplayMode( GLUT_RGB | GLUT_DOUBLE | GLUT_DEPTH );
-	glutInitWindowPosition( 100, 100 );
-	glutInitWindowSize( (int) window_width, (int) window_height );
-	glutCreateWindow ( "Fluids v.1 (c) 2008, R. Hoetzlein (ZLib)" );
+	glutInitDisplayMode(GLUT_RGB | GLUT_DOUBLE | GLUT_DEPTH);
+	glutInitWindowPosition(100, 100);
+	glutInitWindowSize((int)window_width, (int)window_height);
+	glutCreateWindow("Hydro-Gen 2O Standalone");
 
 //	glutFullScreen ();
  

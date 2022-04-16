@@ -23,70 +23,66 @@
 #ifndef DEF_FLUID_SYS
 	#define DEF_FLUID_SYS
 
-	#include <iostream>
 	#include <vector>
-	#include <stdio.h>
-	#include <stdlib.h>
-	#include <math.h>
-
-	#include "point_set.h"
 	#include "fluid.h"
 	
-	// Scalar params
-	#define SPH_SIMSIZE			4
-	#define SPH_SIMSCALE		5
-	#define SPH_VISC			6
-	#define SPH_RESTDENSITY		7
-	#define SPH_PMASS			8
-	#define SPH_PRADIUS			9
-	#define SPH_PDIST			10
-	#define SPH_SMOOTHRADIUS	11
-	#define SPH_INTSTIFF		12
-	#define SPH_EXTSTIFF		13
-	#define SPH_EXTDAMP			14
-	#define SPH_LIMIT			15
-	#define BOUND_ZMIN_SLOPE	16
-	#define FORCE_XMAX_SIN		17
-	#define FORCE_XMIN_SIN		18
-	#define MAX_FRAC			19
-	#define CLR_MODE			20
+	// Physical constants
+	#define GRAVITY glm::dvec3(0, 0, -9.8)
+	
+	// Tunable(ish) parameters
+	#define FLUID_ITERS 2
+	#define m_DT 0.0083
+	#define SPH_RADIUS 0.1
+	#define REST_DENSITY 6378.0
+	#define MAX_NEIGHBOR 50
+	#define RELAXATION 600.0
+	
+	#define K_CORR 0.00001
+	#define VISC_CONST 0.01
 
 	// Vector params
-	#define SPH_VOLMIN			7
-	#define SPH_VOLMAX			8
-	#define SPH_INITMIN			9
-	#define SPH_INITMAX			10
-	
-	#define MAX_PARAM			21
-	#define BFLUID				2
+	#define SPH_VOLMIN glm::ivec3(-4, -4, 0)
+	#define SPH_VOLMAX glm::ivec3(4, 4, 10)
+	#define SPH_INITMIN	glm::ivec3(-2, -2, 3)
+	#define SPH_INITMAX	glm::ivec3(2, 2, 7)
 
-	class FluidSystem : public PointSet {
+	class FluidSystem {
 	public:
 		FluidSystem ();
 
-		// Basic Particle System
-		virtual void Initialize ( int nmax );
-		virtual void Reset ( int nmax );
+		void Draw(float* view_mat);
+
 		virtual void Run ();
-		virtual void Advance ();
-		virtual int AddPoint ();		
-		virtual int AddPointReuse ();
-		
-		// Smoothed Particle Hydrodynamics
-		void SPH_Setup ();
-		void SPH_CreateExample ( int n, int nmax );
-		void SPH_DrawDomain ();
-		void SPH_ComputeKernels ();
 
-		void SPH_ComputePressureGrid ();			// O(kn) - spatial grid
-		
-		void SPH_ComputeForceGridNC ();				// O(cn) - neighbor table
-
-		void SPH_ComputeVorticityAndViscosity();
-
+		void SPH_CreateExample(int n, int nmax);
+		void SPH_DrawDomain();
 	private:
-		// Smoothed Particle Hydrodynamics
-		double m_R2, m_Poly6Kern, m_LapKern, m_SpikyKern; // Kernel functions
-	};
+		glm::dvec3 scaledMin = glm::dvec3(SPH_VOLMIN) * SPH_RADIUS;
+		glm::dvec3 scaledMax = glm::dvec3(SPH_VOLMAX) * SPH_RADIUS;
 
+		// the axis between the bounds of the fluid https://en.wikipedia.org/wiki/Space_diagonal
+		glm::ivec3 gridSpaceDiag = glm::ivec3((scaledMax - scaledMin) / SPH_RADIUS);
+
+		int totalGridCells = gridSpaceDiag.x * gridSpaceDiag.y * gridSpaceDiag.z;
+
+		void PredictPositions();
+		void FindNeighbors();
+		void ComputeDensity();
+		void ComputeLambda();
+		void ComputeCorrections();
+		void ApplyCorrections();
+		void Advance();
+
+		double PolyKernel(double dist);
+		void SpikyKernel(glm::dvec3 &r);
+
+		glm::ivec3 GetGridPos(const glm::dvec3 &pos);
+		// get index in grid space
+		int GetGridIndex(const glm::ivec3 &gridPos);
+
+		std::vector<std::unique_ptr<Fluid>> fluidPs;
+		// grid maps indexSpace To vector of fluid there
+		std::vector<std::vector<int>> grid;
+		std::vector<std::vector<int>> neighbors;
+	};
 #endif

@@ -1,0 +1,67 @@
+﻿'fluids_debug.exe' (Win32): Loaded 'C:\Users\evans\Desktop\fluidsv2\Debug\fluids_debug.exe'. Symbols loaded.
+'fluids_debug.exe' (Win32): Loaded 'C:\Windows\SysWOW64\ntdll.dll'. 
+'fluids_debug.exe' (Win32): Loaded 'C:\Windows\SysWOW64\kernel32.dll'. 
+'fluids_debug.exe' (Win32): Loaded 'C:\Windows\SysWOW64\KernelBase.dll'. 
+'fluids_debug.exe' (Win32): Loaded 'C:\Windows\SysWOW64\user32.dll'. 
+'fluids_debug.exe' (Win32): Loaded 'C:\Windows\SysWOW64\win32u.dll'. 
+'fluids_debug.exe' (Win32): Loaded 'C:\Windows\SysWOW64\gdi32.dll'. 
+'fluids_debug.exe' (Win32): Loaded 'C:\Windows\SysWOW64\gdi32full.dll'. 
+'fluids_debug.exe' (Win32): Loaded 'C:\Windows\SysWOW64\msvcp_win.dll'. 
+'fluids_debug.exe' (Win32): Loaded 'C:\Windows\SysWOW64\ucrtbase.dll'. 
+'fluids_debug.exe' (Win32): Loaded 'C:\Windows\SysWOW64\advapi32.dll'. 
+'fluids_debug.exe' (Win32): Loaded 'C:\Windows\SysWOW64\msvcrt.dll'. 
+'fluids_debug.exe' (Win32): Loaded 'C:\Windows\SysWOW64\sechost.dll'. 
+'fluids_debug.exe' (Win32): Loaded 'C:\Windows\SysWOW64\rpcrt4.dll'. 
+'fluids_debug.exe' (Win32): Loaded 'C:\Windows\SysWOW64\glu32.dll'. 
+'fluids_debug.exe' (Win32): Loaded 'C:\Windows\SysWOW64\opengl32.dll'. 
+'fluids_debug.exe' (Win32): Loaded 'C:\Windows\SysWOW64\combase.dll'. 
+'fluids_debug.exe' (Win32): Loaded 'C:\Windows\SysWOW64\winmm.dll'. 
+'fluids_debug.exe' (Win32): Loaded 'C:\Windows\SysWOW64\DXCore.dll'. 
+'fluids_debug.exe' (Win32): Loaded 'C:\Windows\SysWOW64\imm32.dll'. 
+The thread 0x3d94 has exited with code 0 (0x0).
+'fluids_debug.exe' (Win32): Loaded 'C:\Windows\SysWOW64\uxtheme.dll'. 
+'fluids_debug.exe' (Win32): Loaded 'C:\Windows\SysWOW64\msctf.dll'. 
+'fluids_debug.exe' (Win32): Loaded 'C:\Windows\SysWOW64\directxdatabasehelper.dll'. 
+'fluids_debug.exe' (Win32): Loaded 'C:\Windows\SysWOW64\ntmarta.dll'. 
+'fluids_debug.exe' (Win32): Loaded 'C:\Windows\SysWOW64\kernel.appcore.dll'. 
+'fluids_debug.exe' (Win32): Loaded 'C:\Windows\SysWOW64\bcryptprimitives.dll'. 
+'fluids_debug.exe' (Win32): Loaded 'C:\Windows\SysWOW64\clbcatq.dll'. 
+'fluids_debug.exe' (Win32): Loaded 'C:\Windows\SysWOW64\AppXDeploymentClient.dll'. 
+'fluids_debug.exe' (Win32): Loaded 'C:\Windows\SysWOW64\urlmon.dll'. 
+'fluids_debug.exe' (Win32): Loaded 'C:\Windows\SysWOW64\netutils.dll'. 
+'fluids_debug.exe' (Win32): Loaded 'C:\Windows\SysWOW64\srvcli.dll'. 
+'fluids_debug.exe' (Win32): Loaded 'C:\Windows\SysWOW64\iertutil.dll'. 
+'fluids_debug.exe' (Win32): Unloaded 'C:\Windows\SysWOW64\iertutil.dll'
+'fluids_debug.exe' (Win32): Unloaded 'C:\Windows\SysWOW64\srvcli.dll'
+'fluids_debug.exe' (Win32): Unloaded 'C:\Windows\SysWOW64\netutils.dll'
+'fluids_debug.exe' (Win32): Unloaded 'C:\Windows\SysWOW64\urlmon.dll'
+'fluids_debug.exe' (Win32): Unloaded 'C:\Windows\SysWOW64\AppXDeploymentClient.dll'
+'fluids_debug.exe' (Win32): Loaded 'C:\Windows\System32\DriverStore\FileRepository\87_lenovo_whl_cml_iigd_dch.inf_amd64_fab1aeb0d3c907fb\ig9icd32.dll'. 
+'fluids_debug.exe' (Win32): Loaded 'C:\Windows\SysWOW64\ole32.dll'. 
+'fluids_debug.exe' (Win32): Loaded 'C:\Windows\SysWOW64\shell32.dll'. 
+'fluids_debug.exe' (Win32): Loaded 'C:\Windows\SysWOW64\dwmapi.dll'. 
+'fluids_debug.exe' (Win32): Loaded 'C:\Windows\SysWOW64\dxgi.dll'. 
+'fluids_debug.exe' (Win32): Loaded 'C:\Windows\System32\DriverStore\FileRepository\87_lenovo_whl_cml_iigd_dch.inf_amd64_fab1aeb0d3c907fb\igdml32.dll'. 
+'fluids_debug.exe' (Win32): Loaded 'C:\Windows\SysWOW64\ResourcePolicyClient.dll'. 
+'fluids_debug.exe' (Win32): Unloaded 'C:\Windows\SysWOW64\ResourcePolicyClient.dll'
+'fluids_debug.exe' (Win32): Loaded 'C:\Windows\System32\DriverStore\FileRepository\87_lenovo_whl_cml_iigd_dch.inf_amd64_fab1aeb0d3c907fb\igdgmm32.dll'. 
+'fluids_debug.exe' (Win32): Loaded 'C:\Windows\SysWOW64\version.dll'. 
+'fluids_debug.exe' (Win32): Unloaded 'C:\Windows\SysWOW64\version.dll'
+'fluids_debug.exe' (Win32): Loaded 'C:\Windows\System32\DriverStore\FileRepository\87_lenovo_whl_cml_iigd_dch.inf_amd64_fab1aeb0d3c907fb\igc32.dll'. 
+'fluids_debug.exe' (Win32): Loaded 'C:\Windows\SysWOW64\TextInputFramework.dll'. 
+'fluids_debug.exe' (Win32): Loaded 'C:\Windows\SysWOW64\oleaut32.dll'. 
+'fluids_debug.exe' (Win32): Loaded 'C:\Windows\SysWOW64\CoreMessaging.dll'. 
+'fluids_debug.exe' (Win32): Loaded 'C:\Windows\SysWOW64\CoreUIComponents.dll'. 
+'fluids_debug.exe' (Win32): Loaded 'C:\Windows\SysWOW64\WinTypes.dll'. 
+'fluids_debug.exe' (Win32): Loaded 'C:\Windows\SysWOW64\cryptbase.dll'. 
+'fluids_debug.exe' (Win32): Loaded 'C:\Windows\SysWOW64\powrprof.dll'. 
+'fluids_debug.exe' (Win32): Loaded 'C:\Windows\SysWOW64\umpdc.dll'. 
+The thread 0xa6c4 has exited with code 1 (0x1).
+The thread 0x5914 has exited with code 0 (0x0).
+The thread 0x7c40 has exited with code 0 (0x0).
+The thread 0x4dc4 has exited with code 0 (0x0).
+The thread 0xaa50 has exited with code 0 (0x0).
+The thread 0x58d0 has exited with code 0 (0x0).
+The thread 0x25d4 has exited with code 0 (0x0).
+The thread 0x6840 has exited with code 0 (0x0).
+The program '[42104] fluids_debug.exe' has exited with code 0 (0x0).
