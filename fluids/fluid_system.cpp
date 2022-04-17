@@ -143,7 +143,7 @@ void FluidSystem::PredictPositions() {
 		glm::dvec3 deltaVel = GRAVITY * m_DT; // a * dt = change in v
 
 		// apply force to velocity (gravity)
-		p->vel += deltaVel;
+		p->vel += (double)GRAVITY_ON * deltaVel;
 
 		p->predictPos = p->pos + (p->vel * m_DT);
 
@@ -252,13 +252,13 @@ void FluidSystem::ComputeCorrections() {
 			//------------End SCORR calculation-------
 
 			// Spiky Kernel - modifies r by ref
-			glm::dvec3 r = (p->predictPos - pcurr->predictPos);
-			SpikyKernel(r);
-			r /= REST_DENSITY;
+			glm::dvec3 grad = (p->predictPos - pcurr->predictPos);
+			SpikyKernel(grad);
+			grad /= REST_DENSITY;
 			// End Spiky Kernel
 
 			//p->deltaPos += r * (p->lambda + pcurr->lambda
-			p->deltaPos += r * (p->lambda + pcurr->lambda + sCorr);
+			p->deltaPos += grad * (p->lambda + pcurr->lambda + sCorr);
 		}
 	}
 }
@@ -286,6 +286,27 @@ void FluidSystem::Advance() {
 		p->pos = p->predictPos;
 	}
 
+	// VORTICITY CONFINEMENT
+	for (int i = 0; i < fluidPs.size(); ++i) {
+		std::unique_ptr<Fluid>& p = fluidPs.at(i);
+
+		glm::dvec3 omega = glm::dvec3(0.0f);
+		glm::dvec3 eta = glm::dvec3(0.0f);
+		for (int j : neighbors.at(i)) {
+			std::unique_ptr<Fluid>& pcurr = fluidPs.at(j);
+			glm::dvec3 grad = (p->predictPos - pcurr->predictPos);
+			SpikyKernel(grad);
+
+			eta += grad;
+			omega += glm::cross((pcurr->vel - p->vel), grad); // eqn 15 in pbf
+		}
+		eta *= glm::length(omega);
+
+		glm::dvec3 vortForce = glm::cross(glm::normalize(eta), omega) * VORT_CONST; // eqn 16
+		p->vel += vortForce * m_DT;
+	}
+	// END VORTICITY CONFINEMENT
+
 	// VISCOSITY
 	for (int i = 0; i < fluidPs.size(); ++i) {
 		std::unique_ptr<Fluid>& p = fluidPs.at(i);
@@ -294,11 +315,11 @@ void FluidSystem::Advance() {
 			std::unique_ptr<Fluid>& pcurr = fluidPs.at(j);
 			acc += (pcurr->vel - p->vel) * PolyKernel(glm::length(p->predictPos - pcurr->predictPos));
 		}
-		p->vel_tmp = acc;
+		p->tmp = acc;
 	}
 
 	for (std::unique_ptr<Fluid>& p : fluidPs) {
-		p->vel += VISC_CONST * p->vel_tmp * m_DT;
+		p->vel += VISC_CONST * p->tmp * m_DT;
 	}
 	// END VISCOSITY
 }

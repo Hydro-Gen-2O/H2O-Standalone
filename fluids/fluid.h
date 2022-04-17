@@ -31,7 +31,7 @@
 		Fluid(const glm::dvec3 &pos, DWORD d) : 
 			pos(pos), clr(d), 
 			predictPos(glm::dvec3(0.0)), deltaPos(glm::dvec3(0.0)),
-			vel(glm::dvec3(0.0)), vel_tmp(glm::dvec3(0.0)),
+			vel(glm::dvec3(0.0)), tmp(glm::dvec3(0.0)),
 			density(0.0), lambda(0.0), vorticity(glm::dvec3(0.0))
 		{}
 		glm::dvec3	predictPos;
@@ -39,7 +39,7 @@
 		DWORD		clr;
 		glm::dvec3	vel;
 
-		glm::dvec3	vel_tmp; // store stuff related to vel
+		glm::dvec3	tmp; // store tmp calcs
 
 		double density;	
 		double lambda;
