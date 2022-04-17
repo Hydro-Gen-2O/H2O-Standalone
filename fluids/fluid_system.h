@@ -30,7 +30,7 @@
 	#define GRAVITY glm::dvec3(0, 0, -9.8)
 	
 	// Tunable(ish) parameters
-	#define FLUID_ITERS 2
+	#define FLUID_ITERS 4
 	#define m_DT 0.0083
 	#define SPH_RADIUS 0.1
 	#define REST_DENSITY 6378.0

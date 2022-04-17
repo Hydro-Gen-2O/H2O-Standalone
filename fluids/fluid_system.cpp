@@ -199,7 +199,7 @@ void FluidSystem::FindNeighbors() {
 					double lenR = glm::length(p->predictPos - pcurr->predictPos);
 					if (lenR <= SPH_RADIUS) {
 						neighbors.at(i).push_back(pIndex);
-						if (neighbors.at(i).size() >= MAX_NEIGHBOR) { goto neighbor_loop; }
+						//if (neighbors.at(i).size() >= MAX_NEIGHBOR) { goto neighbor_loop; }
 					}
 				}
 			}
@@ -296,8 +296,8 @@ void FluidSystem::Advance() {
 		}
 		p->vel_tmp = acc;
 	}
-	for (int i = 0; i < fluidPs.size(); ++i) {
-		std::unique_ptr<Fluid>& p = fluidPs.at(i);
+
+	for (std::unique_ptr<Fluid>& p : fluidPs) {
 		p->vel += VISC_CONST * p->vel_tmp * m_DT;
 	}
 	// END VISCOSITY
