@@ -82,18 +82,11 @@ void FluidSystem::SpikyKernel(glm::dvec3& r) {
 }
 
 void FluidSystem::SPH_CreateExample(int n, int nmax) {
-	//for (int x = SPH_INITMIN.x; x <= SPH_INITMAX.x; ++x) {
-	//for (int y = SPH_INITMIN.y; y <= SPH_INITMAX.y; ++y) {
-	//for (int z = SPH_INITMIN.z; z <= SPH_INITMAX.z; ++z) {
-	//	fluidPs.push_back(std::make_unique<Fluid>(
-	//		glm::dvec3(x, y, z) * SPH_RADIUS * 0.5,
-	//		COLORA(0.5, 0.5, 0.6, 1)));
-	//}}}
-
 	double ss = 0.5;
 	for (double x = SPH_INITMIN.x; x <= SPH_INITMAX.x; x += ss) {
 	for (double y = SPH_INITMIN.y; y <= SPH_INITMAX.y; y += ss) {
 	for (double z = SPH_INITMIN.z; z <= SPH_INITMAX.z; z += ss) {
+		//std::cout << glm::to_string(glm::dvec3(x, y, z)) << std::endl;
 		fluidPs.push_back(std::make_unique<Fluid>(
 			glm::dvec3(x, y, z) * SPH_RADIUS, 
 			COLORA(0.5, 0.5, 0.6, 1)));
@@ -118,7 +111,7 @@ glm::ivec3 FluidSystem::GetGridPos(const glm::dvec3 &pos) {
 
 	//std::cout << "compare: " << glm::to_string(glm::ivec3(pos) - SPH_VOLMIN) << ", "
 	//	<< glm::to_string(glm::ivec3(pos / SPH_RADIUS) - SPH_VOLMIN) << std::endl;
-	return glm::ivec3(pos / SPH_RADIUS) - SPH_VOLMIN;
+	return glm::ivec3(pos / SPH_RADIUS - SPH_VOLMIN);
 }
 
 int FluidSystem::GetGridIndex(const glm::ivec3 &gridPos) {

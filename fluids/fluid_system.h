@@ -40,13 +40,13 @@
 	
 	#define K_CORR 0.00001
 	#define VISC_CONST 0.01
-	#define VORT_CONST 0.0003;//0.0005;
+	#define VORT_CONST 0.0000;//0.0005;
 
 	// Vector params
-	#define SPH_VOLMIN glm::ivec3(-4, -4, 0)
-	#define SPH_VOLMAX glm::ivec3(4, 4, 10)
-	#define SPH_INITMIN	glm::ivec3(-2, -2, 3)
-	#define SPH_INITMAX	glm::ivec3(2, 2, 9)
+	#define SPH_VOLMIN glm::dvec3(-3.5, -3.5, 0)
+	#define SPH_VOLMAX glm::dvec3(3.5, 3.5, 10)
+	#define SPH_INITMIN	glm::dvec3(-2, -2, 1.5)
+	#define SPH_INITMAX	glm::dvec3(2, 2, 5.5)
 
 	class FluidSystem {
 	public:
